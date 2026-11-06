@@ -3,6 +3,7 @@ import helmet from "helmet";
 import cors from "cors";
 import { config, features } from "./config.js";
 import { chainStatus, platformAccount } from "./chains.js";
+import { ordersRouter } from "./routes/orders.js";
 
 export function createApp() {
   const app = express();
@@ -40,6 +41,8 @@ export function createApp() {
       next(err);
     }
   });
+
+  app.use("/v1/orders", ordersRouter);
 
   app.use((req, res) => {
     res.status(404).json({ status: "fail", message: "Not found" });
