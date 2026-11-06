@@ -61,6 +61,6 @@ The contract functions the backend calls are listed in [docs/CONTRACT_INTERFACE.
 
 ## Deployment
 
-The Docker image is built from this folder; `docker-compose.yml` + `nginx/nginx.conf` run it behind HTTPS on the EC2 server. Deploys run automatically on push to `main` when `backend/**` changes ([.github/workflows/deploy-backend.yml](../.github/workflows/deploy-backend.yml)).
+Live at **https://3.109.65.92.nip.io** (API under `/v1`, health check at `/health`), on AWS EC2 behind nginx with a Let's Encrypt certificate.
 
-
+The Docker image is built from this folder; `docker-compose.yml` + `nginx/nginx.conf` run it on the server. Deploys run automatically on push to `main` when `backend/**` changes, or by hand from **Actions → Deploy Backend → Run workflow** ([.github/workflows/deploy-backend.yml](../.github/workflows/deploy-backend.yml)). All settings come from the `BACKEND_ENV_FILE` GitHub secret. Full guide: [docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md).
