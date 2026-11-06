@@ -42,6 +42,8 @@ function Status({ value }) {
   return <p className={`mt-3 text-sm ${value.ok ? "text-accent" : "text-sell"}`}>{value.text}</p>;
 }
 
+// Paused with the broker feature (not rendered; see the Admin page below).
+// eslint-disable-next-line no-unused-vars
 function BrokerLicenses({ token }) {
   const [label, setLabel] = useState("");
   const [wallet, setWallet] = useState("");
@@ -464,7 +466,8 @@ export default function Admin() {
           <PlatformFees />
           <Markets token={session.token} />
           <TokenList token={session.token} />
-          {session.admin && <BrokerLicenses token={session.token} />}
+          {/* Broker licenses (ENSv2) are paused with the broker feature; re-enable when ENS is set up.
+          {session.admin && <BrokerLicenses token={session.token} />} */}
         </div>
       )}
     </>
