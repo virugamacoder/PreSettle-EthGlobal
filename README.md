@@ -30,7 +30,7 @@
 | [ens/](ens/) | ENSv2 setup scripts (Sepolia) |
 | [scripts/](scripts/) | Arkiv seed and query scripts |
 | [arkiv/](arkiv/) | Arkiv judging documents |
-| [docs/](docs/) | Build plan and architecture |
+| [docs/](docs/) | Build plan, architecture, [deployment guide](docs/DEPLOYMENT.md) |
 
 ## Links
 
