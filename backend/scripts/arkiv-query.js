@@ -1,4 +1,4 @@
-// Runnable query for Arkiv judges: lists the live SettleX order book on the
+// Runnable query for Arkiv judges: lists the live Pre Settle order book on the
 // Arkiv Rabdi testnet. Read-only; no wallet or key needed.
 //
 //   cd backend && npm install && node scripts/arkiv-query.js

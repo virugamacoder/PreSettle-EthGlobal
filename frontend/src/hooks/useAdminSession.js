@@ -4,7 +4,7 @@ import { signMessage } from "wagmi/actions";
 import { createSiweMessage } from "viem/siwe";
 import { api } from "../lib/api.js";
 
-const KEY = "settlex-admin-session";
+const KEY = "presettle-admin-session";
 
 function load() {
   try {
@@ -37,7 +37,7 @@ export function useAdminSession() {
         uri: window.location.origin,
         nonce,
         version: "1",
-        statement: "Sign in to SettleX admin.",
+        statement: "Sign in to Pre Settle admin.",
       });
       const signature = await signMessage(config, { message });
       const res = await api.post("/auth/verify", { message, signature });

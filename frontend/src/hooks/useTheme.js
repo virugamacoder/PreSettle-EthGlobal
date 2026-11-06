@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 
-const KEY = "settlex-theme";
+const KEY = "presettle-theme";
 const listeners = new Set();
 
 function read() {

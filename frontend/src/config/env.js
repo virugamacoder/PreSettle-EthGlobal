@@ -24,7 +24,7 @@ export const settings = {
 
   ens: {
     rpcUrl: env.VITE_SEPOLIA_RPC_URL || undefined,
-    parentName: env.VITE_ENS_PARENT_NAME || "settlex.eth",
+    parentName: env.VITE_ENS_PARENT_NAME || "presettle.eth",
   },
 };
 

@@ -1,4 +1,4 @@
-// Arkiv entity schemas for the SettleX order book.
+// Arkiv entity schemas for the Pre Settle order book.
 // The frontend keeps an identical copy in frontend/src/arkiv/schemas.js.
 //
 // Rules (see docs/PLAN.md §7):
@@ -9,7 +9,7 @@
 import { defineSchema, str, addr, dec, u64, bool, bytes } from "@arkiv-network/sdk/schema";
 
 // OTC order. Owner: maker. Expires at the order deadline.
-export const OtcOrder = defineSchema("settlex.otc_order.v1", {
+export const OtcOrder = defineSchema("presettle.otc_order.v1", {
   maker: addr().indexed(),
   side: str().indexed(), // "sell" | "buy"
   offerToken: addr().indexed(),
@@ -27,7 +27,7 @@ export const OtcOrder = defineSchema("settlex.otc_order.v1", {
 });
 
 // Premarket offer. Owner: seller. Expires after TGE + delivery window.
-export const PremarketOffer = defineSchema("settlex.pm_offer.v1", {
+export const PremarketOffer = defineSchema("presettle.pm_offer.v1", {
   seller: addr().indexed(),
   marketId: u64().indexed(),
   symbol: str().indexed(),
@@ -40,7 +40,7 @@ export const PremarketOffer = defineSchema("settlex.pm_offer.v1", {
 });
 
 // Broker deal link. Owner: broker. Expires after 10 minutes.
-export const BrokerLink = defineSchema("settlex.broker_link.v1", {
+export const BrokerLink = defineSchema("presettle.broker_link.v1", {
   broker: addr().indexed(),
   client: addr().indexed(),
   brokerEns: str(),
@@ -52,7 +52,7 @@ export const BrokerLink = defineSchema("settlex.broker_link.v1", {
 });
 
 // Fill record. Owner: taker. Created read-only (an immutable track record).
-export const Fill = defineSchema("settlex.fill.v1", {
+export const Fill = defineSchema("presettle.fill.v1", {
   market: str().indexed(), // "otc" | "premarket"
   refId: u64().indexed(), // orderId / offerId
   orderKey: str().optional(), // Arkiv $key of the order entity
@@ -64,7 +64,7 @@ export const Fill = defineSchema("settlex.fill.v1", {
 });
 
 // Trader profile. Owner: trader. Extended on each login.
-export const Profile = defineSchema("settlex.profile.v1", {
+export const Profile = defineSchema("presettle.profile.v1", {
   ens: str().indexed(),
   prefTokens: str().optional(),
   minSize: dec().optional(),
@@ -72,7 +72,7 @@ export const Profile = defineSchema("settlex.profile.v1", {
 });
 
 // Curated token list. Written only by the admin wallet; read with createdBy(admin).
-export const Token = defineSchema("settlex.token.v1", {
+export const Token = defineSchema("presettle.token.v1", {
   kind: str().indexed(), // "otc" | "premarket" | "collateral"
   address: addr().indexed(),
   symbol: str().indexed(),

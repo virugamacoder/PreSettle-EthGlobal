@@ -78,7 +78,7 @@ function BrokerLicenses({ token }) {
   return (
     <Section
       title="Broker licenses (ENSv2)"
-      description={`Issue <name>.${settings.ens.parentName}: non-transferable, expiring, revocable. The broker can edit only settlex.prefs.`}
+      description={`Issue <name>.${settings.ens.parentName}: non-transferable, expiring, revocable. The broker can edit only presettle.prefs.`}
     >
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <input value={label} onChange={(e) => setLabel(e.target.value.trim())} placeholder="label (e.g. ravi)" className={field} />

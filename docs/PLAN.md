@@ -1,16 +1,16 @@
-# SettleX × ETHGlobal Mumbai: Build Plan (Arc + Arkiv + ENSv2)
+# Pre Settle × ETHGlobal Mumbai: Build Plan (Arc + Arkiv + ENSv2)
 
-> One plan for building SettleX **fresh during ETHGlobal Mumbai** and submitting it to **Arc**, **Arkiv** and **ENS**.
+> One plan for building Pre Settle **fresh during ETHGlobal Mumbai** and submitting it to **Arc**, **Arkiv** and **ENS**.
 > It is based on the sponsor prize pages and developer docs, **re-checked against the docs and contract source on 2026‑11‑06** (see §18 Verification log). The only item still marked **⚠** is a judgment call to ask the sponsor about at their booth. Everything else is confirmed.
 
 ---
 
 ## 0. TL;DR
 
-| Pick | Prize | Pool | What SettleX shows for it |
+| Pick | Prize | Pool | What Pre Settle shows for it |
 |---|---|---|---|
 | **1. Arc** | **Best Smart Contracts with Advanced Stablecoin Logic, in Arc Studio** | $3,000 | USDC/EURC **conditional escrow**: OTC + premarket with **automatic release**, an **on‑chain dispute**, **multi‑step settlement** and **fee splitting**, built on a **reusable** `ConditionalEscrow` |
-| **2. ENS** | **Best Use of ENSv2** | **$7,000** (1st $3k · 2nd $2k · 3rd $1k · 3rd $1k) | **Verified broker identities** as ENSv2 subnames (`ravi.settlex.eth`): **non‑transferable, expiring, revocable**, each with its **own Permissioned Resolver** where the broker can edit **only** `settlex.prefs` (Enhanced Access Control) |
+| **2. ENS** | **Best Use of ENSv2** | **$7,000** (1st $3k · 2nd $2k · 3rd $1k · 3rd $1k) | **Verified broker identities** as ENSv2 subnames (`ravi.presettle.eth`): **non‑transferable, expiring, revocable**, each with its **own Permissioned Resolver** where the broker can edit **only** `presettle.prefs` (Enhanced Access Control) |
 | **3. Arkiv** | **Build on Arkiv (from scratch)** | $4,000 (1st $3k · 2nd $1k) | **Open order book**: wallet‑owned order, offer, broker‑link, fill and profile entities that **expire at their deadline**, queried with typed filters |
 | Bonus | **Arkiv + Swarm (from scratch)** | $500 (does **not** use one of your 3 picks) | Deal term sheet PDF on Swarm, referenced from the Arkiv order entity (optional) |
 
@@ -35,7 +35,7 @@
 
 ### 2.1 ETHGlobal finalist (top 10)
 ETHGlobal's usual finalist criteria: **Technicality, Originality, Practicality, Usability (UI/UX), WOW factor**.
-SettleX's strongest pitch is one sentence:
+Pre Settle's strongest pitch is one sentence:
 > *"Trustless OTC and pre‑launch trading: money settles in USDC escrow on Arc, identities are verified ENSv2 names, and the order book is open data on Arkiv that nobody, not even us, can secretly edit."*
 
 ### 2.2 Arc: Advanced Stablecoin Logic
@@ -44,8 +44,8 @@ SettleX's strongest pitch is one sentence:
 - Write, test and deploy contracts **in Arc Studio** that show advanced programmable USDC/EURC logic: *conditional flows, onchain automation, multi‑step settlement*.
 - Then connect them to a web or mobile app.
 - Their examples:
-  - *"Conditional escrow with onchain dispute and automatic release"* → **this is SettleX**
-  - *"Treasury management and payment splitting"* → **the SettleX fee split**
+  - *"Conditional escrow with onchain dispute and automatic release"* → **this is Pre Settle**
+  - *"Treasury management and payment splitting"* → **the Pre Settle fee split**
   - *"Crosschain conditional transfer"* → optional stretch
 - **Bonus:** *contracts designed to be reused by other builders* → `ConditionalEscrow`.
 
@@ -72,7 +72,7 @@ SettleX's strongest pitch is one sentence:
 
 **Features they highlight:** hierarchical registry (your own subname registry), **Enhanced Access Control** (*"delegating specific rights (e.g., editing only certain text records)"*), **Permissioned Resolver**, aliasing, and subname types (*expiring, revocable, transferable / non‑transferable*).
 
-**What makes SettleX "central":** a deal **cannot proceed** unless the broker's ENSv2 name is `REGISTERED` and not expired. When the platform **revokes** (`unregister`) a broker, the UI blocks deals (Level 2: the Arc contract blocks them too). Show this live.
+**What makes Pre Settle "central":** a deal **cannot proceed** unless the broker's ENSv2 name is `REGISTERED` and not expired. When the platform **revokes** (`unregister`) a broker, the UI blocks deals (Level 2: the Arc contract blocks them too). Show this live.
 
 ### 2.4 Arkiv: Build on Arkiv (from scratch)
 
@@ -94,7 +94,7 @@ SettleX's strongest pitch is one sentence:
 
 **Not counted:** installing the SDK without reading from it, or using Arkiv as a log nothing reads.
 
-Their own idea list includes ***"Markets: listings or offers that expire at their deadline"*** and ***"profiles … keyed by ENS names"***. SettleX is both.
+Their own idea list includes ***"Markets: listings or offers that expire at their deadline"*** and ***"profiles … keyed by ENS names"***. Pre Settle is both.
 
 ### 2.5 Arkiv + Swarm bonus ($500, optional)
 - Use **both** Arkiv and Swarm meaningfully, e.g. user‑visible files on Swarm linked from Arkiv entities.
@@ -119,12 +119,12 @@ Their own idea list includes ***"Markets: listings or offers that expire at thei
 | **OTC**: create order (escrow offer token) → partial or full fills → cancel → auto‑refund after the deadline | Arc + Arkiv |
 | **Premarket**: seller creates an offer (locks USDC/EURC collateral) → buyers contribute → TGE → seller delivers **or** buyers claim the penalty → dispute window | Arc + Arkiv |
 | **Fee split** on every settlement: maker / **broker** / platform (pull‑payments) | Arc |
-| **Verified brokers**: ENSv2 subname issue / revoke / expiry, broker edits only `settlex.prefs` | Sepolia + backend |
+| **Verified brokers**: ENSv2 subname issue / revoke / expiry, broker edits only `presettle.prefs` | Sepolia + backend |
 | **Broker deal links** that expire in 10 minutes | Arkiv (+ Arc) |
 | Open **order book** with filters (token, side, price range, verified‑broker only) | Arkiv |
 | Trader profile + fill history | Arkiv (+ ENS name) |
 
-### Out of scope (drop from the old SettleX)
+### Out of scope (drop from the old Pre Settle)
 - The Li.Fi swap page
 - The Equity page
 - The CoinMarketCap 12‑hour cron
@@ -134,13 +134,13 @@ Their own idea list includes ***"Markets: listings or offers that expire at thei
 
 ### Old code → new design (reference only)
 
-| Old SettleX | New |
+| Old Pre Settle | New |
 |---|---|
 | `OTC addTrade/executeTrade` (no cancel) | `OTCMarket` with `cancel`, deadline expiry, fee split |
 | `Premarket createOffer/contributeToOffer/distribute*/distributeAfter24Hours*` | `PremarketMarket` state machine + dispute + automatic `settle` |
 | `getLastAddedTradeIndex` (race condition) | Read `orderId` from the **event** in the receipt |
 | Mongo `trade`, `activity`, `broker_link`, `premarket_*`, `users` | **Arkiv entities** (§7) |
-| ENS v1 reads (name, avatar, `settlex.prefs`) | **ENSv2** registry + per‑broker Permissioned Resolver + EAC (§8) |
+| ENS v1 reads (name, avatar, `presettle.prefs`) | **ENSv2** registry + per‑broker Permissioned Resolver + EAC (§8) |
 | Admin = `owner()` check + spoofable `wallet_address` body field | Contract `Ownable`/roles + backend **SIWE** auth |
 
 ---
@@ -157,12 +157,12 @@ Their own idea list includes ***"Markets: listings or offers that expire at thei
                              ▼                ▼                    ▼
  ┌────────────────────────────┐ ┌───────────────────────────┐ ┌──────────────────────────┐
  │ ARC TESTNET (5042002)      │ │ ARKIV RABDI (7794095)     │ │ SEPOLIA (11155111) ENSv2 │
- │ ConditionalEscrow (reusable)│ │ settlex.otc_order  ⏱deadline│ │ settlex.eth              │
- │ OTCMarket                  │ │ settlex.pm_offer   ⏱TGE+win │ │  └ UserRegistry          │
- │ PremarketMarket            │ │ settlex.broker_link⏱10 min  │ │     ├ ravi  (broker)     │
- │ BrokerRegistry (Level 2)   │ │ settlex.fill       ⏱90 days │ │     └ alice (trader)     │
- │ MockPreToken (demo "XYZ")  │ │ settlex.profile    ⏱180 days│ │ per-broker               │
- │ USDC 0x3600…0000 (6 dec)   │ │ settlex.token (admin-only)  │ │  PermissionedResolver    │
+ │ ConditionalEscrow (reusable)│ │ presettle.otc_order  ⏱deadline│ │ presettle.eth              │
+ │ OTCMarket                  │ │ presettle.pm_offer   ⏱TGE+win │ │  └ UserRegistry          │
+ │ PremarketMarket            │ │ presettle.broker_link⏱10 min  │ │     ├ ravi  (broker)     │
+ │ BrokerRegistry (Level 2)   │ │ presettle.fill       ⏱90 days │ │     └ alice (trader)     │
+ │ MockPreToken (demo "XYZ")  │ │ presettle.profile    ⏱180 days│ │ per-broker               │
+ │ USDC 0x3600…0000 (6 dec)   │ │ presettle.token (admin-only)  │ │  PermissionedResolver    │
  └─────────────▲──────────────┘ └────────────▲──────────────┘ └────────────▲─────────────┘
                │ events / views              │ query/verify               │ issue/revoke/renew
                └──────────────┬──────────────┴────────────────────────────┘
@@ -191,7 +191,7 @@ Their own idea list includes ***"Markets: listings or offers that expire at thei
 ## 5. Repo structure
 
 ```
-settlex/
+presettle/
 ├── contracts/                 # Arc Studio output (Foundry), pulled with `arc-studio pull`
 │   ├── src/ConditionalEscrow.sol
 │   ├── src/OTCMarket.sol
@@ -236,7 +236,7 @@ settlex/
 | **Blocklist**: transfers to or from blocklisted addresses revert | Pay fees with **pull‑payments** (credit + `withdraw`), so one blocklisted fee receiver can't freeze a settlement |
 | Value transfer to `address(0)` reverts | Never "burn" by sending to zero |
 | `maxFeePerGas` floor **20 gwei**; lower transactions are **silently dropped** | If a transaction "disappears", set `maxFeePerGas >= 20 gwei` |
-| `PREVRANDAO` = 0 | No on‑chain randomness, which SettleX doesn't need |
+| `PREVRANDAO` = 0 | No on‑chain randomness, which Pre Settle doesn't need |
 | Finality | Final on inclusion, so wait for **1 confirmation** |
 | Local testing | Plain `anvil` doesn't behave like Arc. Use **Arc Foundry** `arc-anvil --network arc`. |
 
@@ -333,7 +333,7 @@ function resolveDispute(uint256 offerId, Ruling r) external onlyArbiter; // VOID
 
 **Demo tip:** `deliveryWindow` is set **per market**. Use **3–5 minutes** in the demo, not 24 hours, so judges see the whole lifecycle including a default.
 
-**Scope note:** the MVP supports **seller‑created offers only**. The old SettleX's buy/sell direction was confusing. Buyer‑created bids are a stretch goal.
+**Scope note:** the MVP supports **seller‑created offers only**. The old Pre Settle's buy/sell direction was confusing. Buyer‑created bids are a stretch goal.
 
 #### `BrokerRegistry.sol` (Level 2: makes ENS revocation enforce on Arc)
 ```solidity
@@ -381,7 +381,7 @@ A simple mintable ERC‑20 ("XYZ") that plays the token launching at TGE in the 
 
 ### 6.6 The Arc Studio prompt (paste this)
 ```
-Build "SettleX": trustless OTC and pre-launch (premarket) trading settled in stablecoins on Arc Testnet.
+Build "Pre Settle": trustless OTC and pre-launch (premarket) trading settled in stablecoins on Arc Testnet.
 Use Foundry, Solidity ^0.8.24, OpenZeppelin (SafeERC20, ReentrancyGuard, Ownable2Step).
 
 ARC RULES: use the USDC ERC-20 interface 0x3600000000000000000000000000000000000000 (6 decimals) and
@@ -452,7 +452,7 @@ Deploy everything to Arc Testnet and output the addresses and ABIs. Then build a
 ```ts
 import { defineSchema, str, addr, dec, u64, bool, bytes } from "@arkiv-network/sdk/schema"
 
-export const OtcOrder = defineSchema("settlex.otc_order.v1", {
+export const OtcOrder = defineSchema("presettle.otc_order.v1", {
   maker:      addr().indexed(),
   side:       str().indexed(),        // "sell" | "buy"
   offerToken: addr().indexed(),
@@ -463,24 +463,24 @@ export const OtcOrder = defineSchema("settlex.otc_order.v1", {
   orderId:    u64().indexed(),        // on-chain id from OrderCreated event
   deadline:   u64().indexed(),
   broker:     addr().optional(),
-  brokerEns:  str().optional(),       // e.g. "ravi.settlex.eth"
+  brokerEns:  str().optional(),       // e.g. "ravi.presettle.eth"
   makerEns:   str().optional(),
   arcTx:      str(),                  // tx hash (66 chars, fits in 128 bytes)
   termsRef:   str().optional(),       // Swarm reference (bonus) — NEVER an encrypted ref
 })
 
-export const PremarketOffer = defineSchema("settlex.pm_offer.v1", {
+export const PremarketOffer = defineSchema("presettle.pm_offer.v1", {
   seller: addr().indexed(), marketId: u64().indexed(), symbol: str().indexed(),
   collateralToken: addr().indexed(), price: dec().indexed(), tokenAmount: dec(),
   offerId: u64().indexed(), tge: u64().indexed(), arcTx: str(),
 })
 
-export const BrokerLink = defineSchema("settlex.broker_link.v1", {
+export const BrokerLink = defineSchema("presettle.broker_link.v1", {
   broker: addr().indexed(), client: addr().indexed(), brokerEns: str(),
   offerToken: addr(), wantToken: addr(), price: dec(), amount: dec(), feeBps: u64(),
 })
 
-export const Fill = defineSchema("settlex.fill.v1", {
+export const Fill = defineSchema("presettle.fill.v1", {
   market: str().indexed(),            // "otc" | "premarket"
   refId: u64().indexed(),             // orderId / offerId
   orderKey: str().optional(),         // Arkiv $key of the order entity
@@ -488,11 +488,11 @@ export const Fill = defineSchema("settlex.fill.v1", {
   amount: dec(), price: dec(), arcTx: str(),
 })
 
-export const Profile = defineSchema("settlex.profile.v1", {
+export const Profile = defineSchema("presettle.profile.v1", {
   ens: str().indexed(), prefTokens: str().optional(), minSize: dec().optional(), bio: bytes().optional(),
 })
 
-export const Token = defineSchema("settlex.token.v1", {   // written ONLY by the admin wallet
+export const Token = defineSchema("presettle.token.v1", {   // written ONLY by the admin wallet
   kind: str().indexed(),             // "otc" | "premarket" | "collateral"
   address: addr().indexed(), symbol: str().indexed(), decimals: u64(), logo: str().optional(),
 })
@@ -576,7 +576,7 @@ const { entities } = await arkivPublic
 | Live updates | `const unwatch = arkivPublic.watchEntityEvents({ onEntityCreated, onEntityDeleted, onEntityPatched, onExpiryExtended, onError, pollingInterval })`. Events carry **no attributes**, so re‑read the entity. **There is no expiry event**, so re‑query on a timer to drop expired rows. Call `unwatch()` on unmount. |
 
 ### 7.7 Anti‑spoofing (write this up in `how-you-use-arkiv.md`)
-Anyone can write an entity tagged `settlex.otc_order.v1`. So the **backend `/orders` endpoint and the frontend both verify** every row before showing it:
+Anyone can write an entity tagged `presettle.otc_order.v1`. So the **backend `/orders` endpoint and the frontend both verify** every row before showing it:
 1. `entity.$owner == OTCMarket.getOrder(orderId).maker`
 2. The order is not cancelled, not fully filled, and `deadline > now` on Arc.
 3. If `broker` is set, the broker's ENS name is `REGISTERED` (§8).
@@ -642,7 +642,7 @@ Rows that fail are hidden. Count them for the README ("X spoofed rows filtered")
   ```ts
   import { normalize, packetToBytes } from "viem/ens"
   import { toHex } from "viem"
-  const dnsName = toHex(packetToBytes(normalize("ravi.settlex.eth")))
+  const dnsName = toHex(packetToBytes(normalize("ravi.presettle.eth")))
   ```
 - **Exact registry signatures** (from `contracts-v2/contracts/src/registry/PermissionedRegistry.sol`):
   - `register(string label, address owner, IRegistry registry, address resolver, uint256 roleBitmap, uint64 expiry)`, which needs root `ROLE_REGISTRAR`. **A real owner with `roleBitmap = 0` is allowed** (only `owner == 0 && roleBitmap != 0` reverts). An expiry in the past reverts with `CannotSetPastExpiry`.
@@ -653,45 +653,45 @@ Rows that fail are hidden. Count them for the README ("X spoofed rows filtered")
 
 ### 8.2 Name design
 ```
-settlex.eth                         (owned by team/platform wallet, registered via ETHRegistrar)
- └─ subregistry: UserRegistry  "SettleX Registry"  (platform holds root roles)
-      ├─ ravi.settlex.eth   owner = broker wallet, roleBitmap = 0 (no transfer, no resolver change)
+presettle.eth                         (owned by team/platform wallet, registered via ETHRegistrar)
+ └─ subregistry: UserRegistry  "Pre Settle Registry"  (platform holds root roles)
+      ├─ ravi.presettle.eth   owner = broker wallet, roleBitmap = 0 (no transfer, no resolver change)
       │    resolver = PermissionedResolver #ravi (owned by platform)
-      │      addr(60)=broker · text settlex.role=broker · settlex.status=active
-      │      settlex.maxFeeBps=200 · settlex.prefs  ← broker may edit ONLY this key
-      └─ alice.settlex.eth  (optional: verified traders, same pattern, role=trader)
+      │      addr(60)=broker · text presettle.role=broker · presettle.status=active
+      │      presettle.maxFeeBps=200 · presettle.prefs  ← broker may edit ONLY this key
+      └─ alice.presettle.eth  (optional: verified traders, same pattern, role=trader)
 ```
 
-**Trust model** (say this honestly in the README): the platform keeps root roles on its registry, so the registry is **not emancipated**. That's intentional: SettleX is the *verifier* that issues, renews and revokes broker licenses. Brokers own their token and their `settlex.prefs`, but they can't transfer the license or repoint it.
+**Trust model** (say this honestly in the README): the platform keeps root roles on its registry, so the registry is **not emancipated**. That's intentional: Pre Settle is the *verifier* that issues, renews and revokes broker licenses. Brokers own their token and their `presettle.prefs`, but they can't transfer the license or repoint it.
 
 > ✅ Confirmed in the registry source: `register(label, brokerAddr, IRegistry(0), resolver, 0, expiry)` with `roleBitmap = 0` is valid. The broker owns the ERC‑1155 token but holds no roles, so they can't transfer it (no `ROLE_CAN_TRANSFER_ADMIN`), can't change its resolver, and can't create sub‑subnames.
 
 ### 8.3 Setup scripts (`ens/`, viem, Sepolia, platform key)
-1. **`01-register-parent.ts`** registers `settlex.eth`, or any free name such as `settlexmumbai.eth`:
+1. **`01-register-parent.ts`** registers `presettle.eth`, or any free name such as `presettlemumbai.eth`:
    - mint MockUSDC → approve the ETHRegistrar
    - `makeCommitment(label, owner, secret, subregistry=0x0, resolver, duration, referrer=0x0)` → `commit`
    - wait **≥ 60 s** (the commitment must be used within 24 h) → `register(label, owner, secret, 0x0, resolver, duration, MockUSDC, 0x0)`
    - The owner receives `ROLE_SET_SUBREGISTRY(+ADMIN)`, `ROLE_SET_RESOLVER(+ADMIN)` and `ROLE_CAN_TRANSFER_ADMIN`.
 2. **`02-deploy-registry.ts`** deploys a **UserRegistry** proxy through the VerifiableFactory:
    - `deployProxy(USER_REGISTRY_IMPL, salt, initData)`
-   - `salt = keccak256(abi.encode(keccak256("UserRegistry"), namehash("settlex.eth"), version))`
+   - `salt = keccak256(abi.encode(keccak256("UserRegistry"), namehash("presettle.eth"), version))`
    - `initData = initialize([{account: platform, roleBitmap: ALL_ROLES}])`
    - Read `ProxyDeployed.proxyAddress` from the receipt.
-   - Attach it downward: `ETHRegistry.setSubregistry(labelhash("settlex"), userRegistry)` (ETHRegistry `0xd4ebcbbdf463c9c45784603db0ddd499bc44a8b4`). The owner received `ROLE_SET_SUBREGISTRY` at registration. Without this, names *"mint tokens but never resolve."*
-   - Link it upward: `userRegistry.setParent(ETHRegistry, "settlex")`. The platform holds `ROLE_SET_PARENT` through `ALL_ROLES`. This sets the canonical parent that the Universal Resolver checks with `getParent()`.
-   - Point `settlex.eth` at a resolver: `ETHRegistry.setResolver(...)` or set it at registration. Then verify with `getEnsAddress({ name: "settlex.eth" })` on Sepolia.
+   - Attach it downward: `ETHRegistry.setSubregistry(labelhash("presettle"), userRegistry)` (ETHRegistry `0xd4ebcbbdf463c9c45784603db0ddd499bc44a8b4`). The owner received `ROLE_SET_SUBREGISTRY` at registration. Without this, names *"mint tokens but never resolve."*
+   - Link it upward: `userRegistry.setParent(ETHRegistry, "presettle")`. The platform holds `ROLE_SET_PARENT` through `ALL_ROLES`. This sets the canonical parent that the Universal Resolver checks with `getParent()`.
+   - Point `presettle.eth` at a resolver: `ETHRegistry.setResolver(...)` or set it at registration. Then verify with `getEnsAddress({ name: "presettle.eth" })` on Sepolia.
 3. **`03-issue-broker.ts {label} {brokerAddr} {days}`**:
    1. Deploy a **PermissionedResolver** proxy for this broker:
       - salt = `keccak256(abi.encode(keccak256("OwnedResolver"), platform, version=<unique per broker>))`
-      - `initialize(grants=[{platform, ALL_ROLES}], calls=[setAddress(name,60,broker), setText(name,"settlex.role","broker"), setText(name,"settlex.status","active"), setText(name,"settlex.maxFeeBps","200")])`
+      - `initialize(grants=[{platform, ALL_ROLES}], calls=[setAddress(name,60,broker), setText(name,"presettle.role","broker"), setText(name,"presettle.status","active"), setText(name,"presettle.maxFeeBps","200")])`
    2. Delegate exactly one key. Only the selector and key in the encoded setter matter; the name and value are ignored, so `"0x"` / `""` is fine (pattern from the ENS docs):
       ```ts
       const setter = encodeFunctionData({ abi: permissionedResolverAbi, functionName: "setText",
-                                          args: ["0x", "settlex.prefs", ""] })
+                                          args: ["0x", "presettle.prefs", ""] })
       await platform.writeContract({ address: brokerResolver, abi: permissionedResolverAbi,
                                      functionName: "grantSetterRoles", args: [setter, broker] })
       ```
-      The broker can now call `setText(dnsName, "settlex.prefs", json)`. Any other key reverts with `EACUnauthorizedAccountRoles`. The delegation is per resolver instance, which is exactly why each broker gets their own.
+      The broker can now call `setText(dnsName, "presettle.prefs", json)`. Any other key reverts with `EACUnauthorizedAccountRoles`. The delegation is per resolver instance, which is exactly why each broker gets their own.
    3. `UserRegistry.register("ravi", broker, zeroAddress, brokerResolver, 0n, BigInt(now + days*86400))`
    4. **Level 2:** call Arc `BrokerRegistry.setBroker(broker, expiry)`.
 4. **`04-revoke-broker.ts {label}`**:
@@ -703,16 +703,16 @@ settlex.eth                         (owned by team/platform wallet, registered v
 
 | Feature | Implementation |
 |---|---|
-| **Broker badge** on order cards and the deal page | `getState(labelhash)` on the SettleX UserRegistry → `status==REGISTERED && expiry>now`, plus `getEnsAddress(name) == order.broker` and `getEnsText(name,"settlex.status")=="active"`. Show "✓ Verified broker · license expires DD/MM". |
+| **Broker badge** on order cards and the deal page | `getState(labelhash)` on the Pre Settle UserRegistry → `status==REGISTERED && expiry>now`, plus `getEnsAddress(name) == order.broker` and `getEnsText(name,"presettle.status")=="active"`. Show "✓ Verified broker · license expires DD/MM". |
 | **Deal gate** | If the badge check fails, the **Approve deal button is disabled** with "Broker license revoked/expired". On Level 2 the Arc contract also reverts. |
-| **Broker console** (`/broker/profile`) | The broker connects on Sepolia and edits `settlex.prefs` (JSON: tokens, min size, hours) with `setText` on **their** resolver. Trying to edit `settlex.status` **fails with `EACUnauthorizedAccountRoles`**. Show this in the demo: it proves Enhanced Access Control. |
-| **Prefs matching** | The market highlights orders matching the connected broker's or trader's `settlex.prefs` |
+| **Broker console** (`/broker/profile`) | The broker connects on Sepolia and edits `presettle.prefs` (JSON: tokens, min size, hours) with `setText` on **their** resolver. Trying to edit `presettle.status` **fails with `EACUnauthorizedAccountRoles`**. Show this in the demo: it proves Enhanced Access Control. |
+| **Prefs matching** | The market highlights orders matching the connected broker's or trader's `presettle.prefs` |
 | **ENS inputs** | Any address field accepts `name.eth` (viem `getEnsAddress`) |
 | **Reverse names** | Show `getEnsName(address)` for makers and takers |
 | **Admin page** (`/admin/brokers`) | SIWE‑authenticated. Issue / renew / revoke through backend endpoints that run the scripts above. |
 
 ### 8.5 ENS submission text (key lines)
-> "SettleX uses ENSv2 as its **broker licensing system**. Each broker gets a **non‑transferable, expiring, revocable** subname in our own UserRegistry, served by a **per‑broker PermissionedResolver** where Enhanced Access Control lets the broker edit **only** `settlex.prefs`, while SettleX controls `settlex.status`. Deals **cannot be approved** unless the broker's name is registered and unexpired, and revocation is mirrored to our Arc escrow contracts."
+> "Pre Settle uses ENSv2 as its **broker licensing system**. Each broker gets a **non‑transferable, expiring, revocable** subname in our own UserRegistry, served by a **per‑broker PermissionedResolver** where Enhanced Access Control lets the broker edit **only** `presettle.prefs`, while Pre Settle controls `presettle.status`. Deals **cannot be approved** unless the broker's name is registered and unexpired, and revocation is mirrored to our Arc escrow contracts."
 
 ---
 
@@ -724,7 +724,7 @@ settlex.eth                         (owned by team/platform wallet, registered v
 | `GET /brokers/:label` | ENS status (registry `getState`, records) |
 | `POST /admin/brokers/issue` · `/renew` · `/revoke` | **SIWE**‑protected. Runs the §8.3 actions with the platform key, then (L2) syncs the Arc `BrokerRegistry`. |
 | Keeper job (every 30 s) | Finds Arc orders past the deadline and premarket offers past TGE+window, and calls `expire()` / `claimDefault()` (permissionless automatic release) |
-| ENS→Arc sync (L2) | Watches `LabelRegistered`, `LabelUnregistered` and `ExpiryUpdated` on the SettleX UserRegistry, and calls `BrokerRegistry.setBroker` |
+| ENS→Arc sync (L2) | Watches `LabelRegistered`, `LabelUnregistered` and `ExpiryUpdated` on the Pre Settle UserRegistry, and calls `BrokerRegistry.setBroker` |
 | `GET /health` | Health check |
 
 - **Env:** `ARC_RPC`, `SEPOLIA_RPC`, `ARKIV_ACCESS_KEY`, `PLATFORM_PK` (testnet only, never committed), contract addresses.
@@ -772,7 +772,7 @@ If your installed viem has no `arcTestnet` export, upgrade viem rather than hand
 **B. Fill (taker):** browse (Arkiv) → backend verifies → Arc `approve(USDC)` → Arc `fill` (fee split credited) → Arkiv `createEntity(Fill)` → maker and broker `withdraw`.
 
 **C. Broker deal:**
-1. Admin issues `ravi.settlex.eth` (ENS) → Arc `setBroker` (L2).
+1. Admin issues `ravi.presettle.eth` (ENS) → Arc `setBroker` (L2).
 2. Ravi creates a `BrokerLink` (Arkiv, 10 minutes) and shares `/deal/<key>`.
 3. The client opens it and sees the ENS badge.
 4. Approve → Arc `createOrder` with `privateTaker` / `broker` set.
@@ -794,7 +794,7 @@ If your installed viem has no `arcTestnet` export, upgrade viem rather than hand
 
 | Phase | Contracts dev | Frontend dev | Backend / ENS dev | Done when |
 |---|---|---|---|---|
-| **H0–H2** | Arc Studio project + prompt §6.6 | Repo scaffold, wagmi chains | Faucets, keys, register `settlex.eth` | Studio URL exists, one Arkiv test entity written and read |
+| **H0–H2** | Arc Studio project + prompt §6.6 | Repo scaffold, wagmi chains | Faucets, keys, register `presettle.eth` | Studio URL exists, one Arkiv test entity written and read |
 | **H2–H10** | Iterate contracts and tests in Studio → deploy to Arc | Create/fill/cancel UI on Arc | UserRegistry + issue/revoke scripts | Fill works end to end on Arc |
 | **H10–H18** | Premarket + dispute + keeper hooks | Arkiv publish + market reads + filters | `/orders` verifier, keeper, SIWE | The market reads from Arkiv |
 | **H18–H26** | BrokerRegistry (L2), bug fixes | Broker link page, ENS badge/gate, prefs editor | ENS→Arc sync, renew | Revoke blocks a deal live |
@@ -837,7 +837,7 @@ If your installed viem has no `arcTestnet` export, upgrade viem rather than hand
 | 0:20–0:55 | **Arc Studio**: prompt, generated contracts, tests passing, deploy to Arc Testnet | Arc (required) |
 | 0:55–1:35 | Create OTC order → appears in the market (**read from Arkiv**, filters) → partial fill → fee split → withdraw | Arc + Arkiv |
 | 1:35–2:15 | Premarket: TGE countdown → deliver on one offer; **automatic default** on another (claimDefault payout) | Arc |
-| 2:15–2:55 | Broker: `ravi.settlex.eth` badge → edits `settlex.prefs` ✅ → tries `settlex.status` ❌ (EAC) → admin **revokes** → deal blocked | ENS |
+| 2:15–2:55 | Broker: `ravi.presettle.eth` badge → edits `presettle.prefs` ✅ → tries `presettle.status` ❌ (EAC) → admin **revokes** → deal blocked | ENS |
 | 2:55–3:20 | Broker link expires after 10 minutes (refresh → "expired"); "📦 Stored on Arkiv" explorer link | Arkiv |
 | 3:20–3:40 | Architecture diagram + what's next | All |
 
@@ -942,9 +942,9 @@ For each of the 3 picks: the exact prize, every requirement, what you show for i
 
 **Prize (real page, 2026-11-06):** Arc total pool $15,000 = **5 bounties × $3,000**. There are **no place splits; each bounty is a single award.** Only "Arc Studio Continuity Track" is Continuity-only. Our bounty is open to fresh builds. Every Arc prize requires **Arc Studio as the starting point**, and you must **state which bounty** you are submitting for.
 
-**What the bounty asks for → what SettleX shows → backing doc**
+**What the bounty asks for → what Pre Settle shows → backing doc**
 
-| Bounty wording | SettleX evidence | Developer doc that backs it |
+| Bounty wording | Pre Settle evidence | Developer doc that backs it |
 |---|---|---|
 | Programmable logic in **USDC or EURC** | USDC `0x3600…0000` + EURC `0x89B5…D72a` as escrow and collateral tokens | docs.arc.io › contract-addresses (both 6 dec) |
 | **Conditional flows** | Premarket: deliver only in [TGE, TGE+window]; OTC: fills only before the deadline | evm-differences: timestamps non-decreasing → `>=` checks |
@@ -976,7 +976,7 @@ For each of the 3 picks: the exact prize, every requirement, what you show for i
 
 > **Bounty: Best Smart Contracts with Advanced Stablecoin Logic, In Arc Studio.**
 > Arc Studio project: `<STUDIO_URL>` · Live app: `<VERCEL_URL>` · Repo: `<GITHUB_URL>` · Architecture: `docs/architecture.png`
-> SettleX is trustless OTC and pre-launch (premarket) trading settled in USDC/EURC on Arc. All contracts were written, tested, audited and deployed in Arc Studio:
+> Pre Settle is trustless OTC and pre-launch (premarket) trading settled in USDC/EURC on Arc. All contracts were written, tested, audited and deployed in Arc Studio:
 > **ConditionalEscrow**, a reusable escrow module with on-chain disputes, an arbiter timeout default and permissionless automatic release · **OTCMarket**, with partial fills, deadlines, cancel and automatic expiry refunds, plus a maker/broker/platform fee split on every fill · **PremarketMarket**, where the seller locks 100% collateral, buyers pay before TGE, and the seller must deliver inside the TGE window or anyone can trigger the default payout (buyers get their payment plus the seller's collateral).
 > Arc-specific engineering: 6-decimal ERC-20 USDC interface only (never mixed with 18-decimal native value), `>=` time checks for Arc's non-decreasing timestamps, and pull-payments so blocklisted addresses can't freeze settlement.
 > Circle tools: Arc Studio, USDC (gas + settlement), EURC, Circle Dev-Controlled Wallet + Gas Station for the keeper.
@@ -988,22 +988,22 @@ For each of the 3 picks: the exact prize, every requirement, what you show for i
 
 **Qualification → deliverable → backing doc**
 
-| Requirement (real page) | SettleX deliverable | Doc |
+| Requirement (real page) | Pre Settle deliverable | Doc |
 |---|---|---|
-| Built on **ENSv2 on Ethereum mainnet or Sepolia** | Sepolia: `settlex.eth` + own UserRegistry + per-broker PermissionedResolvers | learn/deployments (mainnet still resolves via v1 until launch) |
+| Built on **ENSv2 on Ethereum mainnet or Sepolia** | Sepolia: `presettle.eth` + own UserRegistry + per-broker PermissionedResolvers | learn/deployments (mainnet still resolves via v1 until launch) |
 | **ENSv2 features central, not cosmetic** | Deals are **gated** on the broker's ENSv2 registry status. Revocation (`unregister`) blocks deals live; L2 mirrors it to the Arc contract. | permissioned-registry (`getState`, `unregister`) |
-| Use the highlighted features | **Hierarchical registry** (own UserRegistry via `setSubregistry` / `setParent`) · **Enhanced Access Control** (broker may set only `settlex.prefs` via `grantSetterRoles`) · **Permissioned Resolver** per broker · **subname types**: non-transferable (no `ROLE_CAN_TRANSFER_ADMIN`), expiring (`expiry` / `renew`), revocable (`unregister`) | enhanced-access-control, permissioned-resolver, registry source |
+| Use the highlighted features | **Hierarchical registry** (own UserRegistry via `setSubregistry` / `setParent`) · **Enhanced Access Control** (broker may set only `presettle.prefs` via `grantSetterRoles`) · **Permissioned Resolver** per broker · **subname types**: non-transferable (no `ROLE_CAN_TRANSFER_ADMIN`), expiring (`expiry` / `renew`), revocable (`unregister`) | enhanced-access-control, permissioned-resolver, registry source |
 | **Functional demo, not hard-coded** | Names resolved live with viem `getEnsAddress` / `getEnsText` + registry `getState` | tutorial-app-developers |
 | **Link to a live demo** | Vercel URL | — |
 | **Open source** | Public GitHub repo, MIT | — |
 
-**Demo must show (about 40 s):** a verified badge → broker edits `settlex.prefs` ✅ → broker tries `settlex.status` ❌ (`EACUnauthorizedAccountRoles`) → admin revokes → badge turns red, Approve is disabled → (L2) the Arc call reverts.
+**Demo must show (about 40 s):** a verified badge → broker edits `presettle.prefs` ✅ → broker tries `presettle.status` ❌ (`EACUnauthorizedAccountRoles`) → admin revokes → badge turns red, Approve is disabled → (L2) the Arc call reverts.
 
 **Paste into the ENS submission field:**
 
 > **Prize: Best Use of ENSv2** · Network: **Sepolia ENSv2** · Live demo: `<VERCEL_URL>` · Repo: `<GITHUB_URL>`
-> SettleX uses ENSv2 as its **broker licensing system**. We registered `settlex.eth` and deployed our own **UserRegistry** (linked with `setSubregistry` + `setParent`). Each broker receives `<name>.settlex.eth` registered with an **empty role bitmap**, so the name is **non-transferable**. It is **expiring** (renewed while in good standing) and **revocable** (`unregister`). Each broker name is served by its **own PermissionedResolver**: SettleX controls `settlex.status` / `addr`, and **Enhanced Access Control** (`grantSetterRoles`) lets the broker edit **only** `settlex.prefs`. The app **refuses broker deals** unless the name is `REGISTERED` and unexpired, and revocations are mirrored to our Arc escrow contracts.
-> Addresses: SettleX UserRegistry `<…>`, example broker `ravi.settlex.eth` → resolver `<…>`.
+> Pre Settle uses ENSv2 as its **broker licensing system**. We registered `presettle.eth` and deployed our own **UserRegistry** (linked with `setSubregistry` + `setParent`). Each broker receives `<name>.presettle.eth` registered with an **empty role bitmap**, so the name is **non-transferable**. It is **expiring** (renewed while in good standing) and **revocable** (`unregister`). Each broker name is served by its **own PermissionedResolver**: Pre Settle controls `presettle.status` / `addr`, and **Enhanced Access Control** (`grantSetterRoles`) lets the broker edit **only** `presettle.prefs`. The app **refuses broker deals** unless the name is `REGISTERED` and unexpired, and revocations are mirrored to our Arc escrow contracts.
+> Addresses: Pre Settle UserRegistry `<…>`, example broker `ravi.presettle.eth` → resolver `<…>`.
 
 ### 19.3 ARKIV: "Build on Arkiv (from scratch)" (+ optional Swarm bonus)
 
@@ -1011,7 +1011,7 @@ For each of the 3 picks: the exact prize, every requirement, what you show for i
 
 **Judging (25% each) → file → our answer in one line**
 
-| Criterion | File | SettleX answer |
+| Criterion | File | Pre Settle answer |
 |---|---|---|
 | Arkiv feedback | `/arkiv/friction.md` | Real pain points with expected/actual/repro: 3-chain wallet switching, tGLM funding, `dec` needs strings, `u64(…n)` wrapping, 100-row paging, no expiry event |
 | Reach | `/arkiv/reach.md` | OTC traders, brokers, pre-launch buyers; live URL; after Mumbai: public order-book API for other dApps and agents |
@@ -1035,7 +1035,7 @@ For each of the 3 picks: the exact prize, every requirement, what you show for i
 **Paste into the Arkiv submission field:**
 
 > **Prize: Build on Arkiv (from scratch)** [+ **Arkiv + Swarm bonus**] · Live: `<VERCEL_URL>` · Repo: `<GITHUB_URL>`
-> SettleX's order book lives on Arkiv: OTC orders, premarket offers, 10-minute broker deal links, fills and trader profiles are **wallet-owned entities** with typed, indexed schemas (`settlex.*.v1`). Each **expires exactly when it stops being valid** (order deadline, TGE + delivery window, 10 minutes for broker links), so there's no cron and no stale listings. Funds stay in Arc escrow; every Arkiv row is verified against the on-chain order before display, so spoofed rows are filtered out. Fills are created **read-only**, giving an immutable track record. Writer wallets and a runnable query are in the README; `/arkiv/*.md` answers each judging criterion.
+> Pre Settle's order book lives on Arkiv: OTC orders, premarket offers, 10-minute broker deal links, fills and trader profiles are **wallet-owned entities** with typed, indexed schemas (`presettle.*.v1`). Each **expires exactly when it stops being valid** (order deadline, TGE + delivery window, 10 minutes for broker links), so there's no cron and no stale listings. Funds stay in Arc escrow; every Arkiv row is verified against the on-chain order before display, so spoofed rows are filtered out. Fills are created **read-only**, giving an immutable track record. Writer wallets and a runnable query are in the README; `/arkiv/*.md` answers each judging criterion.
 
 ### 19.4 Totals you're competing for (verified)
 

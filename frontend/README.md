@@ -18,7 +18,7 @@ npm run build             # production build in dist/
 |---|---|
 | **Arc Testnet** (5042002) | Default chain: escrow contracts, USDC/EURC payments and gas |
 | **Arkiv Rabdi** (7794095) | Order book writes: listings, deal links, fills, profiles. The wallet switches here for those signatures. |
-| **Sepolia** | ENSv2: broker license lookups and the broker's `settlex.prefs` record |
+| **Sepolia** | ENSv2: broker license lookups and the broker's `presettle.prefs` record |
 
 ## Pages
 
@@ -55,7 +55,7 @@ See [.env.example](.env.example). Everything is public (bundled into the browser
 | `VITE_OTC_CONTRACT_ARC_TESTNET`, `VITE_PREMARKET_CONTRACT_ARC_TESTNET` | Contract addresses |
 | `VITE_ARKIV_ACCESS_KEY` | Arkiv Hub key; add the site to its **Origins** |
 | `VITE_ARKIV_ADMIN_ADDRESS` | Wallet that publishes the curated token list |
-| `VITE_SEPOLIA_RPC_URL`, `VITE_ENS_PARENT_NAME` | ENSv2 on Sepolia (`settlex.eth` by default) |
+| `VITE_SEPOLIA_RPC_URL`, `VITE_ENS_PARENT_NAME` | ENSv2 on Sepolia (`presettle.eth` by default) |
 
 ## Deploy
 

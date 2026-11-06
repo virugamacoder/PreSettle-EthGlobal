@@ -2,7 +2,7 @@ import { isLicensedFor, useBrokerLicense } from "../hooks/useBroker.js";
 
 /**
  * Live ENSv2 license check for a broker name.
- * Verified only if the name is REGISTERED, unexpired, settlex.status=active,
+ * Verified only if the name is REGISTERED, unexpired, presettle.status=active,
  * and (when `address` is given) resolves to that wallet.
  */
 export function BrokerBadge({ name, address, size = "sm" }) {

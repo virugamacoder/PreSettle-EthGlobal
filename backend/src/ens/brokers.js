@@ -5,8 +5,8 @@
 //   or change its resolver (non-transferable license)
 // - absolute expiry                 -> expiring license, extended with renew()
 // - unregister()                    -> revocation (name becomes AVAILABLE, token burned)
-// Each broker name gets its own PermissionedResolver. SettleX keeps all roles,
-// and the broker is granted the setter role for ONE text key: settlex.prefs.
+// Each broker name gets its own PermissionedResolver. Pre Settle keeps all roles,
+// and the broker is granted the setter role for ONE text key: presettle.prefs.
 import {
   encodeAbiParameters,
   encodeFunctionData,
@@ -30,7 +30,7 @@ const PERMISSIONED_RESOLVER_IMPL = "0x115eb53f0c60696633855f90b138178fb40b2b2c";
 const ALL_ROLES = 0x1111111111111111111111111111111111111111111111111111111111111111n;
 const STATUS = ["AVAILABLE", "RESERVED", "REGISTERED"];
 const ETH_COIN_TYPE = 60n;
-const PREFS_KEY = "settlex.prefs";
+const PREFS_KEY = "presettle.prefs";
 
 const REGISTRY_ABI = parseAbi([
   "function register(string label, address owner, address registry, address resolver, uint256 roleBitmap, uint64 expiry) returns (uint256)",
@@ -88,9 +88,9 @@ export async function readBroker(label) {
   const [address, licenseStatus, prefs, maxFeeBps] = registered
     ? await Promise.all([
         sepoliaPublic.getEnsAddress({ name }).catch(() => null),
-        sepoliaPublic.getEnsText({ name, key: "settlex.status" }).catch(() => null),
+        sepoliaPublic.getEnsText({ name, key: "presettle.status" }).catch(() => null),
         sepoliaPublic.getEnsText({ name, key: PREFS_KEY }).catch(() => null),
-        sepoliaPublic.getEnsText({ name, key: "settlex.maxFeeBps" }).catch(() => null),
+        sepoliaPublic.getEnsText({ name, key: "presettle.maxFeeBps" }).catch(() => null),
       ])
     : [null, null, null, null];
 
@@ -112,8 +112,8 @@ export async function readBroker(label) {
 /**
  * Issues a broker license:
  * 1. deploy a PermissionedResolver for this broker with its records,
- * 2. let the broker edit only settlex.prefs,
- * 3. register <label> in the SettleX UserRegistry with no roles and an expiry.
+ * 2. let the broker edit only presettle.prefs,
+ * 3. register <label> in the Pre Settle UserRegistry with no roles and an expiry.
  */
 export async function issueBroker({ label, address, days, maxFeeBps }) {
   requireWrite();
@@ -138,9 +138,9 @@ export async function issueBroker({ label, address, days, maxFeeBps }) {
   );
   const initialRecords = [
     encodeFunctionData({ abi: RESOLVER_ABI, functionName: "setAddress", args: [dnsName, ETH_COIN_TYPE, address] }),
-    encodeFunctionData({ abi: RESOLVER_ABI, functionName: "setText", args: [dnsName, "settlex.role", "broker"] }),
-    encodeFunctionData({ abi: RESOLVER_ABI, functionName: "setText", args: [dnsName, "settlex.status", "active"] }),
-    encodeFunctionData({ abi: RESOLVER_ABI, functionName: "setText", args: [dnsName, "settlex.maxFeeBps", String(maxFeeBps)] }),
+    encodeFunctionData({ abi: RESOLVER_ABI, functionName: "setText", args: [dnsName, "presettle.role", "broker"] }),
+    encodeFunctionData({ abi: RESOLVER_ABI, functionName: "setText", args: [dnsName, "presettle.status", "active"] }),
+    encodeFunctionData({ abi: RESOLVER_ABI, functionName: "setText", args: [dnsName, "presettle.maxFeeBps", String(maxFeeBps)] }),
   ];
   const initData = encodeFunctionData({
     abi: RESOLVER_ABI,
@@ -155,7 +155,7 @@ export async function issueBroker({ label, address, days, maxFeeBps }) {
   if (!deployed) throw httpError(502, "Resolver deployment emitted no ProxyDeployed event");
   const resolver = deployed.args.proxyAddress;
 
-  // 2. Broker may set ONLY settlex.prefs (name/value in the setter are ignored).
+  // 2. Broker may set ONLY presettle.prefs (name/value in the setter are ignored).
   const setter = encodeFunctionData({ abi: RESOLVER_ABI, functionName: "setText", args: ["0x", PREFS_KEY, ""] });
   const grantReceipt = await send({
     address: resolver, abi: RESOLVER_ABI, functionName: "grantSetterRoles", args: [setter, address],

@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api.js";
 import { settings } from "../config/env.js";
 
-/** "ravi.settlex.eth" -> "ravi"; also accepts a bare label. null if not under our parent name. */
+/** "ravi.presettle.eth" -> "ravi"; also accepts a bare label. null if not under our parent name. */
 export function brokerLabel(nameOrLabel) {
   if (!nameOrLabel) return null;
   const n = nameOrLabel.trim().toLowerCase();

@@ -53,7 +53,7 @@ export function Header() {
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4">
         <Link to="/" className="flex items-center gap-2 font-semibold">
           <img src="/favicon.svg" alt="" className="h-7 w-7" />
-          <span>SettleX</span>
+          <span>Pre Settle</span>
         </Link>
 
         <nav className="ml-4 hidden items-center gap-1 md:flex" aria-label="Main">

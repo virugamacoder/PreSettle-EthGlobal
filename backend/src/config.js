@@ -35,7 +35,7 @@ const schema = z.object({
 
   // Sepolia: ENSv2 broker names
   SEPOLIA_RPC_URL: optional(z.string().url()),
-  ENS_PARENT_NAME: z.string().default("settlex.eth"),
+  ENS_PARENT_NAME: z.string().default("presettle.eth"),
   ENS_USER_REGISTRY: optional(address),
 
   // Platform account (keeper, ENS admin). Testnet-only key.

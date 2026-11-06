@@ -11,8 +11,8 @@ export const arkivWalletChain = rabdi({ accessKey: "" });
 // Arc Testnet first: it's the default chain (contracts + USDC settlement).
 // Arkiv: users sign order-book writes. Sepolia: ENSv2 (broker prefs).
 export const wagmiConfig = getDefaultConfig({
-  appName: "SettleX",
-  projectId: settings.walletConnectProjectId || "settlex-dev",
+  appName: "Pre Settle",
+  projectId: settings.walletConnectProjectId || "presettle-dev",
   chains: [arcTestnet, arkivWalletChain, sepolia],
   transports: {
     [arcTestnet.id]: http(settings.arc.rpcUrl),

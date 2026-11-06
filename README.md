@@ -1,4 +1,4 @@
-# SettleX
+# Pre Settle
 
 **Trustless OTC and pre-launch (premarket) trading, settled in stablecoins.**
 
@@ -46,7 +46,6 @@
 
 - Planning and documentation were drafted with **Claude Code** (Anthropic).
 - Smart contracts are generated, tested and audited with **Arc Studio** (an AI agent), then reviewed by the team.
-- Commits made with AI assistance carry a `Co-Authored-By` trailer.
 
 ## License
 

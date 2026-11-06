@@ -27,7 +27,7 @@ On startup the server logs which features are **on** and which are **off** becau
 | GET | `/v1/config` | — | Public settings: chain ID, USDC/EURC, contract addresses, ENS parent, feature flags |
 | GET | `/v1/status` | — | Latest block on Arc / Arkiv / Sepolia, platform account, keeper status |
 | GET | `/v1/orders` | — | OTC orders from Arkiv, verified on Arc. Query: `side`, `offerToken`, `wantToken`, `maker`, `partial`, `minPrice`, `maxPrice`, `limit` (≤100), `cursor` |
-| GET | `/v1/brokers/:label` | — | Broker license: status, expiry, address, `settlex.*` records, `verified` |
+| GET | `/v1/brokers/:label` | — | Broker license: status, expiry, address, `presettle.*` records, `verified` |
 | GET | `/v1/auth/nonce` | — | One-time nonce for Sign-In with Ethereum |
 | POST | `/v1/auth/verify` | — | `{message, signature}` → session token (admins are wallets in `ADMIN_WALLETS`) |
 | POST | `/v1/admin/brokers` | admin | `{label, address, days, maxFeeBps}`: issue a broker license |

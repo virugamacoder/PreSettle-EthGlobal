@@ -147,7 +147,7 @@ function BrokerPrefs() {
       setStatus({
         ok: false,
         text: /EACUnauthorizedAccountRoles|unauthori/i.test(msg)
-          ? `Rejected by ENSv2 access control: brokers can only set settlex.prefs. (${msg})`
+          ? `Rejected by ENSv2 access control: brokers can only set presettle.prefs. (${msg})`
           : msg,
       });
     } finally {
@@ -157,26 +157,26 @@ function BrokerPrefs() {
   }
 
   return (
-    <Card title="Broker preferences (ENSv2)" description={`Brokers can edit only the settlex.prefs text record of their <name>.${settings.ens.parentName}; SettleX controls settlex.status and the address record.`}>
+    <Card title="Broker preferences (ENSv2)" description={`Brokers can edit only the presettle.prefs text record of their <name>.${settings.ens.parentName}; Pre Settle controls presettle.status and the address record.`}>
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-2">
           <input value={label} onChange={(e) => setLabel(e.target.value.trim())} placeholder="your broker label" className={`${field} flex-1`} />
           <span className="text-sm text-muted">.{settings.ens.parentName}</span>
         </div>
         {clean && <BrokerBadge name={brokerName(clean)} address={address} size="md" />}
-        {license.data?.prefs && <p className="num text-xs text-muted">Current settlex.prefs: {license.data.prefs}</p>}
+        {license.data?.prefs && <p className="num text-xs text-muted">Current presettle.prefs: {license.data.prefs}</p>}
         <textarea value={prefs} onChange={(e) => setPrefs(e.target.value)} rows={3} className={`${field} num`} />
         <div className="flex flex-wrap gap-2">
-          <button onClick={() => setText("settlex.prefs", prefs, "settlex.prefs updated on ENS.")} disabled={busy || !licensed} className={btn}>
+          <button onClick={() => setText("presettle.prefs", prefs, "presettle.prefs updated on ENS.")} disabled={busy || !licensed} className={btn}>
             Save prefs to ENS
           </button>
           <button
-            onClick={() => setText("settlex.status", "active", "Unexpected: settlex.status was writable.")}
+            onClick={() => setText("presettle.status", "active", "Unexpected: presettle.status was writable.")}
             disabled={busy || !licensed}
             className="rounded-md border border-line px-4 py-2 text-sm disabled:opacity-50"
             title="Shows that ENSv2 access control blocks brokers from editing their license status"
           >
-            Test permission: edit settlex.status
+            Test permission: edit presettle.status
           </button>
         </div>
         {status && <p className={`text-sm ${status.ok ? "text-accent" : "text-sell"}`}>{status.text}</p>}

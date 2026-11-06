@@ -2,7 +2,7 @@
   "name": "pre-settle-backend",
   "version": "0.1.0",
   "private": true,
-  "description": "SettleX backend: order verification, keeper and broker admin",
+  "description": "Pre Settle backend: order verification, keeper and broker admin",
   "type": "module",
   "main": "src/index.js",
   "engines": {

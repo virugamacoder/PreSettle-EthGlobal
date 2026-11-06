@@ -5,7 +5,7 @@ One repository, three deploy targets:
 | Part | Folder | Where it runs | How it deploys |
 |---|---|---|---|
 | Frontend | `frontend/` | **Vercel** | Vercel Git integration, **Root Directory = `frontend`** |
-| Backend | `backend/` | **AWS EC2** (the existing SettleX server) | GitHub Actions → Docker Hub → SSH → Docker Compose, **only when `backend/` changes** |
+| Backend | `backend/` | **AWS EC2** (the existing Pre Settle server) | GitHub Actions → Docker Hub → SSH → Docker Compose, **only when `backend/` changes** |
 | Contracts | `contracts/` | **Arc Testnet** | Deployed from **Arc Studio**, then pulled into `contracts/` with `arc-studio pull`. No CI. |
 
 ---
@@ -38,7 +38,7 @@ The repo must be **public** for judging.
    | `VITE_OTC_CONTRACT_ARC_TESTNET`, `VITE_PREMARKET_CONTRACT_ARC_TESTNET`, … | contract addresses from Arc Studio |
    | `VITE_SEPOLIA_RPC_URL` | Sepolia RPC (ENS) |
    | `VITE_ARKIV_ADMIN_ADDRESS` | wallet that publishes the curated token list |
-   | `VITE_ENS_PARENT_NAME` | `settlex.eth` (or the parent name you registered) |
+   | `VITE_ENS_PARENT_NAME` | `presettle.eth` (or the parent name you registered) |
    | `VITE_ARC_TESTNET_RPC_URL` | optional, defaults to `https://rpc.testnet.arc.io` |
 
 5. Add `frontend/vercel.json` so page refreshes don't return 404:
@@ -50,11 +50,11 @@ The repo must be **public** for judging.
    git diff HEAD^ HEAD --quiet -- .
    ```
    (This runs inside the Root Directory, so `.` means `frontend/`.)
-7. If an old SettleX Vercel project exists, delete it (or remove its domain) once the new one is live.
+7. If an old Pre Settle Vercel project exists, delete it (or remove its domain) once the new one is live.
 
 ---
 
-## 3. Backend on the existing AWS server (replacing the old SettleX backend)
+## 3. Backend on the existing AWS server (replacing the old Pre Settle backend)
 
 ### How the swap works
 The new workflow deploys into the **same EC2 server, same `APP_DIR`, same nginx and HTTPS certificate**. Docker Compose sees the same project and replaces the old `app` container with the new image. The URL stays `https://13.207.134.130.nip.io`.
@@ -93,7 +93,7 @@ The workflow is in the repo: [`.github/workflows/deploy-backend.yml`](../.github
 
 - Runs on push to `main` when `backend/**` changes, or manually (**Actions → Deploy Backend → Run workflow**).
 - **Build:** Docker image from `./backend`, pushed as `<DOCKER_HUB_USERNAME>/pre-settle-backend:latest` and `:sha-…`.
-- **Deploy:** writes `.env` from `BACKEND_ENV_FILE`, makes sure the Let's Encrypt certificate for `<SERVER_HOST>.nip.io` exists (skipped if still valid), copies `backend/docker-compose.yml` + `backend/nginx/nginx.conf` to `APP_DIR`, then `docker compose up -d`. This replaces the old SettleX container in place.
+- **Deploy:** writes `.env` from `BACKEND_ENV_FILE`, makes sure the Let's Encrypt certificate for `<SERVER_HOST>.nip.io` exists (skipped if still valid), copies `backend/docker-compose.yml` + `backend/nginx/nginx.conf` to `APP_DIR`, then `docker compose up -d`. This replaces the old Pre Settle container in place.
 - **Health check:** waits for `https://<SERVER_HOST>.nip.io/health` to return `{"status":"ok"}`.
 
 ### 3.4 Check it worked
