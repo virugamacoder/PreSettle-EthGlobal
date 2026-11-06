@@ -11,7 +11,7 @@ All entities use **named schemas** (`presettle.*.v1`). The schema tag is not a s
 | `presettle.broker_link.v1` | broker | **10 minutes** after creation | `broker`, `client` | `brokerEns`, `offerToken`, `wantToken`, `price`, `amount`, `feeBps` |
 | `presettle.fill.v1` (read-only) | taker | 90 days | `market`, `refId`, `taker`, `maker` | `orderKey?`, `baseToken?`, `quoteToken?`, `symbol?`, `amount`, `price`, `arcTx` |
 | `presettle.profile.v1` | trader | 180 days, extended on login | `ens` | `prefTokens?`, `minSize?`, `bio?` |
-| `presettle.token.v1` | admin wallet | max lifetime, re-extended | `kind`, `address`, `symbol` | `name`, `decimals`, `logo?` |
+| `presettle.token.v1` | admin wallet | max lifetime, re-extended | `kind`, `address`, `symbol` | `name`, `decimals`, `logo?`, `cmcId?` |
 
 `?` = optional column.
 

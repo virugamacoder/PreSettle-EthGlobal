@@ -86,7 +86,7 @@ Secret values can't be copied from the old repo; enter them again.
 |---|---|
 | `BACKEND_ENV_FILE` | Paste the full content of the backend `.env` (multi-line), following `backend/.env.example` |
 
-The workflow writes this secret to `<APP_DIR>/.env` on the server and appends `DOCKER_IMAGE=<user>/pre-settle-backend:latest`. To add or change a variable, edit this one secret; the workflow doesn't change. Remember to lock the Arkiv access key to the server IP (Arkiv Hub → **IP allowlist**) and use **testnet-only** private keys.
+The workflow writes this secret to `<APP_DIR>/.env` on the server and appends `DOCKER_IMAGE=<user>/pre-settle-backend:latest`. To add or change a variable, edit this one secret; the workflow doesn't change. Include `COINMARKETCAP_API_KEY=...` if you want reference prices on order pages. Remember to lock the Arkiv access key to the server IP (Arkiv Hub → **IP allowlist**) and use **testnet-only** private keys.
 
 ### 3.3 Workflow file
 The workflow is in the repo: [`.github/workflows/deploy-backend.yml`](../.github/workflows/deploy-backend.yml).

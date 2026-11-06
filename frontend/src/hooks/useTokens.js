@@ -6,8 +6,8 @@ import { settings } from "../config/env.js";
 
 // Always available on Arc, even before the admin publishes a token list.
 const BUILT_IN = [
-  { address: settings.arc.usdc, symbol: "USDC", name: "USD Coin", decimals: 6, kind: "collateral" },
-  { address: settings.arc.eurc, symbol: "EURC", name: "Euro Coin", decimals: 6, kind: "collateral" },
+  { address: settings.arc.usdc, symbol: "USDC", name: "USD Coin", decimals: 6, kind: "collateral", cmcId: 3408 },
+  { address: settings.arc.eurc, symbol: "EURC", name: "Euro Coin", decimals: 6, kind: "collateral", cmcId: 20641 },
 ];
 
 /**
@@ -21,7 +21,7 @@ export function useTokens() {
     staleTime: 5 * 60_000,
     queryFn: async () => {
       const { entities } = await arkivPublic
-        .select({ address: true, symbol: true, name: true, decimals: true, kind: true, logo: true })
+        .select({ address: true, symbol: true, name: true, decimals: true, kind: true, logo: true, cmcId: true })
         .from(Token)
         .createdBy(settings.arkiv.adminAddress)
         .orderBy(asc("$key"))
@@ -34,6 +34,7 @@ export function useTokens() {
         decimals: Number(e.decimals.value),
         kind: e.kind.value,
         logo: e.logo?.value ?? null,
+        cmcId: e.cmcId ? Number(e.cmcId.value) : null,
       }));
     },
   });

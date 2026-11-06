@@ -82,6 +82,7 @@ export const Token = defineSchema("presettle.token.v1", {
   name: str(),
   decimals: u64(),
   logo: str().optional(),
+  cmcId: u64().optional(), // CoinMarketCap ID for the reference price
 });
 
 export const schemas = { OtcOrder, PremarketOffer, BrokerLink, Fill, Profile, Token };

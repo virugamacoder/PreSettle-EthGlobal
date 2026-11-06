@@ -7,6 +7,7 @@ import { keeperStatus } from "./keeper.js";
 import { ordersRouter } from "./routes/orders.js";
 import { analyticsRouter } from "./routes/analytics.js";
 import { viewsRouter } from "./routes/views.js";
+import { pricesRouter } from "./routes/prices.js";
 import { authRouter } from "./routes/auth.js";
 import { adminBrokersRouter, brokersRouter } from "./routes/brokers.js";
 import { uploadsDir, uploadsRouter } from "./routes/uploads.js";
@@ -58,6 +59,7 @@ export function createApp() {
   app.use("/v1/orders", ordersRouter);
   app.use("/v1/analytics", analyticsRouter);
   app.use("/v1/views", viewsRouter);
+  app.use("/v1/prices", pricesRouter);
   app.use("/v1/auth", authRouter);
   app.use("/v1/brokers", brokersRouter);
   app.use("/v1/admin/brokers", adminBrokersRouter);

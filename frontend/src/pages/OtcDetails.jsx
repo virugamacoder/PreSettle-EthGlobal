@@ -10,6 +10,7 @@ import { Pill } from "../components/OrderList.jsx";
 import { TxSteps, errorMessage, initSteps, updateStep } from "../components/TxSteps.jsx";
 import { useArkivOrder, useOnchainOrder } from "../hooks/useOrder.js";
 import { useRecordView } from "../hooks/useViews.js";
+import { MarketPrice } from "../components/MarketPrice.jsx";
 import { useTokens, tokenLabel } from "../hooks/useTokens.js";
 import { OTC_ABI, orientation } from "../contracts/otc.js";
 import { Fill } from "../arkiv/schemas.js";
@@ -207,6 +208,7 @@ export default function OtcDetails() {
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <section className="rounded-xl border border-line bg-surface p-5">
           <Row label="Price"><span className="num">{formatAmount(order.price)} {q}</span> per {b}</Row>
+          <MarketPrice baseToken={byAddress[base?.toLowerCase()]} quoteToken={byAddress[quote?.toLowerCase()]} dealPrice={order.price} />
           <Row label="Listed amount"><span className="num">{formatAmount(order.amount)} {b}</span></Row>
           <Row label="Remaining">
             {remainingBaseText !== null ? <span className="num">{formatAmount(remainingBaseText)} {b}</span> : <span className="text-muted">{settings.arc.otc ? "loading…" : "contract not configured"}</span>}

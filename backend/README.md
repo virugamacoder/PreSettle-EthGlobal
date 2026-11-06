@@ -31,6 +31,7 @@ On startup the server logs which features are **on** and which are **off** becau
 | POST | `/v1/views/:key` | — | Count a view of a listing (once per visitor per 10 min) |
 | GET | `/v1/views?keys=` | — | View counts for up to 100 listings |
 | GET | `/uploads/:file` | — | Uploaded token logos |
+| GET | `/v1/prices?ids=` | — | USD reference prices by CoinMarketCap ID (cached 5 min) |
 | GET | `/v1/brokers/:label` | — | Broker license: status, expiry, address, `presettle.*` records, `verified` |
 | GET | `/v1/auth/nonce` | — | One-time nonce for Sign-In with Ethereum |
 | POST | `/v1/auth/verify` | — | `{message, signature}` → session token (admins are wallets in `ADMIN_WALLETS`) |
@@ -53,6 +54,7 @@ See [.env.example](.env.example). In production the whole file is stored in the 
 | Broker issue/revoke | the above + `PLATFORM_PRIVATE_KEY` |
 | Admin sign-in | `AUTH_SECRET`, `ADMIN_WALLETS` |
 | Keeper | `KEEPER_ENABLED=true`, `PLATFORM_PRIVATE_KEY`, `OTC_CONTRACT` |
+| Reference prices | `COINMARKETCAP_API_KEY` |
 | View counts, uploads | `DATA_DIR` (default `./data`; a Docker volume `data` on the server) |
 
 The contract functions the backend calls are listed in [docs/CONTRACT_INTERFACE.md](../docs/CONTRACT_INTERFACE.md). When the real ABI arrives, update [src/contracts/otc.js](src/contracts/otc.js).

@@ -177,6 +177,7 @@ function Markets() {
 function TokenList({ token: sessionToken }) {
   const config = useConfig();
   const [logo, setLogo] = useState(null);
+  const [cmcId, setCmcId] = useState("");
   const { address } = useAccount();
   const [token, setToken] = useState("");
   const [kind, setKind] = useState("otc");
@@ -196,7 +197,7 @@ function TokenList({ token: sessionToken }) {
       const arkiv = await getArkivWallet(config);
       const { entityKey } = await arkiv.createEntity(
         Token,
-        { kind, address: addr(token), symbol, name: name.slice(0, 120), decimals: u64(BigInt(decimals)), ...(logoUrl ? { logo: logoUrl } : {}) },
+        { kind, address: addr(token), symbol, name: name.slice(0, 120), decimals: u64(BigInt(decimals)), ...(logoUrl ? { logo: logoUrl } : {}), ...(/^\d+$/.test(cmcId) ? { cmcId: u64(BigInt(cmcId)) } : {}) },
         { expiration: ExpirationTime.max() },
       );
       setStatus({ ok: true, text: `${symbol} published to the token list (${arkivExplorer.entity(entityKey)})` });
@@ -219,6 +220,10 @@ function TokenList({ token: sessionToken }) {
         </select>
         <button onClick={publish} disabled={busy || !isListAdmin || !isAddress(token)} className={btn}>Publish</button>
       </div>
+      <label className="mt-3 flex flex-wrap items-center gap-3 text-sm text-muted">
+        CoinMarketCap ID (optional, for the reference price)
+        <input value={cmcId} onChange={(e) => setCmcId(e.target.value.trim())} placeholder="e.g. 1027" inputMode="numeric" className={`${field} num w-32 py-1`} />
+      </label>
       <label className="mt-3 flex flex-wrap items-center gap-3 text-sm text-muted">
         Logo (optional, PNG/JPEG/WebP/GIF, max 512 KB)
         <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => setLogo(e.target.files?.[0] ?? null)} className="text-xs" />
