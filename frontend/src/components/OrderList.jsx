@@ -95,7 +95,7 @@ export function OrderList({ orders, byAddress }) {
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-3">
                     <ArkivBadge entityKey={o.key} />
-                    <Link to={`/otc/${o.key}`} className="rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-accent-ink">
+                    <Link to={`/otc/${o.key}`} className="rounded-full bg-brand-gradient px-3 py-1.5 text-xs font-semibold text-accent-ink">
                       {o.side === "sell" ? "Buy" : "Sell"}
                     </Link>
                   </div>
@@ -123,7 +123,7 @@ export function OrderList({ orders, byAddress }) {
                 <span>{o.makerEns || shortAddress(o.maker)} · ends {timeLeft(o.deadline)}</span>
                 <ArkivBadge entityKey={o.key} />
               </div>
-              <Link to={`/otc/${o.key}`} className="rounded-md bg-accent px-3 py-2 text-center text-sm font-semibold text-accent-ink">
+              <Link to={`/otc/${o.key}`} className="rounded-full bg-brand-gradient px-3 py-2 text-center text-sm font-semibold text-accent-ink">
                 {o.side === "sell" ? "Buy" : "Sell"}
               </Link>
             </li>

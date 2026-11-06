@@ -202,7 +202,7 @@ export default function OtcDetails() {
       <PageHeader
         title={`${order.side === "sell" ? "Selling" : "Buying"} ${b}`}
         description={`Order #${order.orderId.toString()} · priced in ${q}`}
-        actions={<Link to="/otc" className="rounded-md border border-line px-3 py-2 text-sm">Back to market</Link>}
+        actions={<Link to="/otc" className="rounded-full border border-line px-3 py-2 text-sm">Back to market</Link>}
       />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
@@ -258,7 +258,7 @@ export default function OtcDetails() {
               <button
                 type="submit"
                 disabled={!address || busy || !open || !isDecimal(fillText) || Number(fillText) <= 0}
-                className="rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50"
+                className="rounded-full bg-brand-gradient px-4 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50"
               >
                 {!address ? "Connect a wallet" : busy ? "Confirm in your wallet…" : !open && onchain ? "Order closed" : order.side === "sell" ? `Buy ${b}` : `Sell ${b}`}
               </button>

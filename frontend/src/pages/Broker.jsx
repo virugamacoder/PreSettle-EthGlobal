@@ -151,10 +151,10 @@ function CreateLinkForm() {
         {link ? (
           <div className="flex flex-col gap-2">
             <input readOnly value={link} className={`${field} num text-xs`} onFocus={(e) => e.target.select()} />
-            <button type="button" onClick={() => navigator.clipboard?.writeText(link)} className="rounded-md border border-line px-3 py-2 text-sm">Copy link</button>
+            <button type="button" onClick={() => navigator.clipboard?.writeText(link)} className="rounded-full border border-line px-3 py-2 text-sm">Copy link</button>
           </div>
         ) : (
-          <button type="submit" disabled={!address || !valid || busy} className="rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50">
+          <button type="submit" disabled={!address || !valid || busy} className="rounded-full bg-brand-gradient px-4 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50">
             {!address ? "Connect a wallet" : !licensed ? "Verified broker license required" : busy ? "Confirm in your wallet…" : "Create deal link"}
           </button>
         )}

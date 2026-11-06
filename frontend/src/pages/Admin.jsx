@@ -2,10 +2,10 @@ import { useState } from "react";
 import { erc20Abi, isAddress } from "viem";
 import { useAccount, useConfig } from "wagmi";
 import { readContract, switchChain, waitForTransactionReceipt, writeContract } from "wagmi/actions";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { ExpirationTime } from "@arkiv-network/sdk";
 import { addr, u64 } from "@arkiv-network/sdk/schema";
 import { PageHeader, EmptyState } from "../components/PageHeader.jsx";
+import { WalletButton } from "../components/Header.jsx";
 import { BrokerBadge } from "../components/BrokerBadge.jsx";
 import { errorMessage } from "../components/TxSteps.jsx";
 import { useAdminSession } from "../hooks/useAdminSession.js";
@@ -21,7 +21,7 @@ import { api } from "../lib/api.js";
 import { arcExplorer, shortAddress, timeLeft } from "../lib/format.js";
 
 const field = "rounded-md border border-line bg-page px-3 py-2 text-sm text-ink";
-const btn = "rounded-md bg-accent px-4 py-2 text-sm font-semibold text-accent-ink disabled:opacity-50";
+const btn = "rounded-full bg-brand-gradient px-4 py-2 text-sm font-semibold text-accent-ink disabled:opacity-50";
 
 function Section({ title, description, children }) {
   return (
@@ -89,7 +89,7 @@ function BrokerLicenses({ token }) {
       {clean && <div className="mt-3"><BrokerBadge name={brokerName(clean)} size="md" /></div>}
       <div className="mt-4 flex flex-wrap gap-2">
         <button onClick={issue} disabled={busy || !clean || !isAddress(wallet)} className={btn}>Issue license</button>
-        <button onClick={renew} disabled={busy || !clean} className="rounded-md border border-line px-4 py-2 text-sm disabled:opacity-50">Renew by {days || 0} days</button>
+        <button onClick={renew} disabled={busy || !clean} className="rounded-full border border-line px-4 py-2 text-sm disabled:opacity-50">Renew by {days || 0} days</button>
         <button onClick={revoke} disabled={busy || !clean} className="rounded-md border border-sell/50 px-4 py-2 text-sm text-sell disabled:opacity-50">Revoke</button>
       </div>
       <Status value={status} />
@@ -157,7 +157,7 @@ function Markets() {
                   <button
                     onClick={() => send("setRealToken", [BigInt(m.id), realToken[m.id]], `Real token set for ${m.symbol}`)}
                     disabled={busy || !isAddress(realToken[m.id] ?? "")}
-                    className="rounded-md border border-line px-3 py-1 text-xs disabled:opacity-50"
+                    className="rounded-full border border-line px-3 py-1 text-xs disabled:opacity-50"
                   >
                     Set token
                   </button>
@@ -242,7 +242,7 @@ export default function Admin() {
     <>
       <PageHeader title="Admin" description="Broker licenses, premarket markets and the curated token list." />
       {!isConnected ? (
-        <EmptyState title="Connect an admin wallet"><div className="mt-4 flex justify-center"><ConnectButton /></div></EmptyState>
+        <EmptyState title="Connect an admin wallet"><div className="mt-4 flex justify-center"><WalletButton /></div></EmptyState>
       ) : !session ? (
         <EmptyState title="Sign in with Ethereum to manage broker licenses">
           <button onClick={signIn} disabled={pending} className={`${btn} mt-4`}>{pending ? "Check your wallet…" : "Sign in"}</button>

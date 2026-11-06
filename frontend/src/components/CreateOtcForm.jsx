@@ -20,7 +20,7 @@ const DURATIONS = [
 
 const field = "rounded-md border border-line bg-page px-3 py-2 text-sm text-ink";
 
-export function CreateOtcForm() {
+export function CreateOtcForm({ initialSide = "sell" }) {
   const config = useConfig();
   const { address, isConnected } = useAccount();
   const { data: ensName } = useEnsName({ address, chainId: sepolia.id });
@@ -28,7 +28,7 @@ export function CreateOtcForm() {
   const quoteTokens = tokens.filter((t) => t.kind === "collateral");
   const baseTokens = tokens.filter((t) => t.kind !== "collateral");
 
-  const [side, setSide] = useState("sell");
+  const [side, setSide] = useState(initialSide === "buy" ? "buy" : "sell");
   const [base, setBase] = useState("");
   const [customBase, setCustomBase] = useState("");
   const [quote, setQuote] = useState(settings.arc.usdc);
@@ -186,7 +186,7 @@ export function CreateOtcForm() {
           <button
             type="submit"
             disabled={!isConnected || !valid || busy}
-            className="rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50"
+            className="rounded-full bg-brand-gradient px-4 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50"
           >
             {!isConnected ? "Connect a wallet" : busy ? "Confirm in your wallet…" : "Create order"}
           </button>

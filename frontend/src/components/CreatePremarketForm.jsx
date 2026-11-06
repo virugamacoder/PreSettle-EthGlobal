@@ -171,7 +171,7 @@ export function CreatePremarketForm() {
             <Link to={`/premarket/${result.entityKey}`} className="text-accent hover:underline">Open the offer</Link>
           </div>
         ) : (
-          <button type="submit" disabled={!isConnected || !valid || busy} className="rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50">
+          <button type="submit" disabled={!isConnected || !valid || busy} className="rounded-full bg-brand-gradient px-4 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50">
             {!isConnected ? "Connect a wallet" : busy ? "Confirm in your wallet…" : "Create offer"}
           </button>
         )}

@@ -3,8 +3,9 @@ import { Link } from "react-router";
 import { formatUnits } from "viem";
 import { useAccount, useConfig, useReadContracts } from "wagmi";
 import { switchChain, waitForTransactionReceipt, writeContract } from "wagmi/actions";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { PageHeader, EmptyState } from "../components/PageHeader.jsx";
+import { PageHeader, EmptyState, Panel, PillTabs } from "../components/PageHeader.jsx";
+import { WalletButton } from "../components/Header.jsx";
+import { DashboardSidebar } from "../components/DashboardSidebar.jsx";
 import { OrderList } from "../components/OrderList.jsx";
 import { errorMessage } from "../components/TxSteps.jsx";
 import { useMyFills, useMyOrders } from "../hooks/useMyActivity.js";
@@ -87,7 +88,7 @@ function Balances({ address }) {
           <button
             onClick={() => withdraw(t.address)}
             disabled={status[t.address] === "pending"}
-            className="rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-accent-ink disabled:opacity-50"
+            className="rounded-full bg-brand-gradient px-3 py-1.5 text-xs font-semibold text-accent-ink disabled:opacity-50"
           >
             {status[t.address] === "pending" ? "Confirm…" : "Withdraw"}
           </button>
@@ -102,53 +103,46 @@ export default function Dashboard() {
   const [tab, setTab] = useState("orders");
   const { byAddress } = useTokens();
   const orders = useMyOrders(address);
+  const fills = useMyFills(address);
 
   if (!isConnected) {
     return (
       <>
         <PageHeader title="Dashboard" description="Your orders, fills and withdrawable balances." />
-        <EmptyState title="Connect a wallet to see your activity">
-          <div className="mt-4 flex justify-center"><ConnectButton /></div>
-        </EmptyState>
+        <Panel>
+          <EmptyState title="Connect a wallet to see your activity">
+            <div className="mt-4 flex justify-center"><WalletButton /></div>
+          </EmptyState>
+        </Panel>
       </>
     );
   }
 
   return (
     <>
-      <PageHeader
-        title="Dashboard"
-        description="Your orders, fills and withdrawable balances."
-        actions={<Link to="/create" className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-accent-ink">Create order</Link>}
-      />
-      <div className="mb-6 flex gap-1 border-b border-line" role="tablist">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            role="tab"
-            aria-selected={tab === t.id}
-            onClick={() => setTab(t.id)}
-            className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium ${tab === t.id ? "border-accent text-ink" : "border-transparent text-muted hover:text-ink"}`}
-          >
-            {t.label}
-          </button>
-        ))}
+      <PageHeader title="Dashboard" description="Your orders, fills and withdrawable balances." />
+      <div className="grid gap-8 lg:grid-cols-[1fr_400px]">
+        <div className="min-w-0">
+          <div className="mb-5">
+            <PillTabs tabs={TABS.map((t) => ({ value: t.id, label: t.label }))} value={tab} onChange={setTab} label="Dashboard sections" />
+          </div>
+          {tab === "orders" &&
+            (orders.isLoading ? (
+              <EmptyState title="Loading your orders…" compact />
+            ) : orders.error ? (
+              <EmptyState title="Couldn't load your orders">{orders.error.message}</EmptyState>
+            ) : orders.data.length ? (
+              <OrderList orders={orders.data} byAddress={byAddress} />
+            ) : (
+              <EmptyState title="It seems you have no live orders.">
+                Listings disappear from Arkiv at their deadline; refunds show under Balances.
+              </EmptyState>
+            ))}
+          {tab === "fills" && <Fills address={address} />}
+          {tab === "balances" && <Balances address={address} />}
+        </div>
+        <DashboardSidebar orders={orders.data ?? []} fills={fills.data ?? []} />
       </div>
-
-      {tab === "orders" &&
-        (orders.isLoading ? (
-          <EmptyState title="Loading your orders…" />
-        ) : orders.error ? (
-          <EmptyState title="Couldn't load your orders">{orders.error.message}</EmptyState>
-        ) : orders.data.length ? (
-          <OrderList orders={orders.data} byAddress={byAddress} />
-        ) : (
-          <EmptyState title="No live orders">
-            Listings disappear from Arkiv at their deadline; refunds show under Balances.
-          </EmptyState>
-        ))}
-      {tab === "fills" && <Fills address={address} />}
-      {tab === "balances" && <Balances address={address} />}
     </>
   );
 }

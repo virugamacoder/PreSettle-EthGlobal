@@ -1,20 +1,86 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { PageHeader, EmptyState } from "../components/PageHeader.jsx";
-import { MarketStats } from "../components/MarketStats.jsx";
-import { ArkivBadge, Pill } from "../components/OrderList.jsx";
+import { PageHeader, Panel, SectionTitle, EmptyState } from "../components/PageHeader.jsx";
+import { TokenAvatar, TokenBanners } from "../components/TokenBanners.jsx";
+import { ArkivBadge } from "../components/OrderList.jsx";
+import { EyeGrayIcon, SearchIcon } from "../assets/icons/index.jsx";
 import { usePremarketOffers } from "../hooks/usePremarket.js";
 import { useViewCounts } from "../hooks/useViews.js";
 import { useTokens, tokenLabel } from "../hooks/useTokens.js";
 import { formatAmount, shortAddress, timeLeft } from "../lib/format.js";
 import { mulDecimal } from "../lib/amounts.js";
 
+function DealCard({ offer: o, coll, views }) {
+  const preTge = o.tge > Date.now() / 1000;
+  return (
+    <li className="flex flex-col rounded-[14px] border border-line bg-surface p-3.5">
+      <div className="flex items-center gap-2.5">
+        <TokenAvatar symbol={o.symbol} />
+        <div className="flex flex-1 items-center justify-between">
+          <div>
+            <p className="font-semibold leading-tight">{o.symbol}</p>
+            <p className="text-xs font-medium text-muted">Pre-launch · {coll} collateral</p>
+          </div>
+          <div className="text-right">
+            <p className="num font-semibold leading-tight">{formatAmount(o.price)} {coll}</p>
+            <p className="text-xs font-medium text-muted">per token</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-2.5 flex justify-between border-t border-line pt-2.5">
+        <div>
+          <p className="text-sm font-medium text-muted">Amount</p>
+          <p className="num text-sm font-semibold text-accent">{formatAmount(o.tokenAmount)} {o.symbol}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-sm font-medium text-muted">Seller collateral</p>
+          <p className="num text-sm font-semibold text-accent">{formatAmount(mulDecimal(o.tokenAmount, o.price))} {coll}</p>
+        </div>
+      </div>
+
+      <div className="mt-2.5 flex items-center justify-between border-t border-line pt-2.5">
+        <div className="flex flex-col gap-0.5 text-xs text-muted">
+          <span title={o.seller}>Seller {shortAddress(o.seller)}</span>
+          <span className="flex items-center gap-3">
+            <span className={preTge ? "font-semibold text-accent" : "font-semibold text-warn"}>
+              {preTge ? `TGE in ${timeLeft(o.tge)}` : "TGE passed"}
+            </span>
+            {views > 0 && (
+              <span className="flex items-center gap-1" title="Views">
+                <span className="block h-4 w-4"><EyeGrayIcon /></span>
+                <span className="num">{views}</span>
+              </span>
+            )}
+            <ArkivBadge entityKey={o.key} />
+          </span>
+        </div>
+        <Link to={`/premarket/${o.key}`} className="rounded-full bg-brand-gradient px-5 py-1.5 text-sm font-semibold text-accent-ink">
+          {preTge ? "Buy" : "View"}
+        </Link>
+      </div>
+    </li>
+  );
+}
+
 export default function Premarket() {
   const [symbol, setSymbol] = useState("");
+  const [search, setSearch] = useState("");
   const { byAddress } = useTokens();
   const all = usePremarketOffers();
-  const offers = (all.data ?? []).filter((o) => !symbol || o.symbol === symbol);
-  const symbols = [...new Set((all.data ?? []).map((o) => o.symbol))].sort();
+  const list = all.data ?? [];
+
+  // Featured banners: the pre-launch tokens with the most live offers.
+  const bySymbol = new Map();
+  for (const o of list) {
+    const s = bySymbol.get(o.symbol) ?? { symbol: o.symbol, offers: 0, tge: o.tge };
+    s.offers += 1;
+    bySymbol.set(o.symbol, s);
+  }
+  const featured = [...bySymbol.values()].sort((a, b) => b.offers - a.offers);
+
+  const q = search.trim().toLowerCase();
+  const offers = list.filter((o) => (!symbol || o.symbol === symbol) && (!q || o.symbol.toLowerCase().includes(q)));
   const viewCounts = useViewCounts(offers.map((o) => o.key.toLowerCase()));
 
   return (
@@ -22,67 +88,60 @@ export default function Premarket() {
       <PageHeader
         title="Premarket"
         description="Buy tokens before they launch. Sellers lock 100% of the deal value as collateral in escrow on Arc; if they don't deliver the real tokens after TGE, buyers receive that collateral."
-        actions={<Link to="/create?tab=premarket" className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-accent-ink">Create offer</Link>}
+        actions={
+          <Link to="/create?tab=premarket" className="rounded-full bg-brand-gradient px-5 py-2 text-sm font-semibold text-accent-ink">
+            Create offer
+          </Link>
+        }
       />
 
-      <MarketStats />
+      <TokenBanners items={featured} selected={symbol} onSelect={setSymbol} />
 
-      {symbols.length > 1 && (
-        <div className="mb-4 flex flex-wrap gap-2">
-          {["", ...symbols].map((s) => (
-            <button
-              key={s || "all"}
-              onClick={() => setSymbol(s)}
-              className={`rounded-full border px-3 py-1 text-sm ${symbol === s ? "border-accent text-accent" : "border-line text-muted hover:text-ink"}`}
-            >
-              {s || "All"}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {all.isLoading ? (
-        <EmptyState title="Loading offers…" />
-      ) : all.error ? (
-        <EmptyState title="Couldn't load offers">{all.error.message}</EmptyState>
-      ) : offers.length === 0 ? (
-        <EmptyState title="No live premarket offers">
-          <Link to="/create?tab=premarket" className="text-accent hover:underline">Create the first offer</Link>
-        </EmptyState>
-      ) : (
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {offers.map((o) => {
-            const coll = tokenLabel(byAddress, o.collateralToken);
-            return (
-              <li key={o.key} className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5">
-                <div className="flex items-center justify-between">
-                  <span className="text-lg font-semibold">{o.symbol}</span>
-                  <Pill tone={o.tge > Date.now() / 1000 ? "accent" : "warn"}>
-                    {o.tge > Date.now() / 1000 ? `TGE in ${timeLeft(o.tge)}` : "TGE passed"}
-                  </Pill>
-                </div>
-                <dl className="grid grid-cols-2 gap-y-1 text-sm">
-                  <dt className="text-muted">Price</dt>
-                  <dd className="num text-right">{formatAmount(o.price)} {coll}</dd>
-                  <dt className="text-muted">Amount</dt>
-                  <dd className="num text-right">{formatAmount(o.tokenAmount)} {o.symbol}</dd>
-                  <dt className="text-muted">Collateral</dt>
-                  <dd className="num text-right">{formatAmount(mulDecimal(o.tokenAmount, o.price))} {coll}</dd>
-                  <dt className="text-muted">Seller</dt>
-                  <dd className="text-right" title={o.seller}>{shortAddress(o.seller)}</dd>
-                </dl>
-                <div className="mt-auto flex items-center justify-between">
-                  <span className="flex items-center gap-3">
-                    <ArkivBadge entityKey={o.key} />
-                    {viewCounts[o.key.toLowerCase()] > 0 && <span className="num text-xs text-muted" title="Views">👁 {viewCounts[o.key.toLowerCase()]}</span>}
-                  </span>
-                  <Link to={`/premarket/${o.key}`} className="rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-accent-ink">View offer</Link>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <SectionTitle>Live Deals</SectionTitle>
+      <Panel
+        toolbar={
+          <>
+            <div className="flex rounded-full border border-line bg-surface p-1">
+              {["", ...featured.map((f) => f.symbol)].slice(0, 6).map((s) => (
+                <button
+                  key={s || "all"}
+                  type="button"
+                  onClick={() => setSymbol(s)}
+                  className={`rounded-full px-4 py-1.5 text-sm font-semibold ${symbol === s ? "bg-brand-gradient text-accent-ink" : "text-ink"}`}
+                >
+                  {s || "All"}
+                </button>
+              ))}
+            </div>
+            <label className="ml-auto flex h-11 w-full items-center gap-2 rounded-full border border-line bg-surface px-4 sm:w-64">
+              <span className="block h-4 w-4 text-muted"><SearchIcon /></span>
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search"
+                className="w-full bg-transparent text-sm outline-none placeholder:text-muted"
+                aria-label="Search by token"
+              />
+            </label>
+          </>
+        }
+      >
+        {all.isLoading ? (
+          <EmptyState title="Loading premarket deals…" compact />
+        ) : all.error ? (
+          <EmptyState title="Couldn't load the premarket deals.">{all.error.message}</EmptyState>
+        ) : offers.length === 0 ? (
+          <EmptyState title="It seems there is no premarket deal yet.">
+            <Link to="/create?tab=premarket" className="font-semibold text-accent hover:underline">Create the first offer</Link>
+          </EmptyState>
+        ) : (
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {offers.map((o) => (
+              <DealCard key={o.key} offer={o} coll={tokenLabel(byAddress, o.collateralToken)} views={viewCounts[o.key.toLowerCase()] ?? 0} />
+            ))}
+          </ul>
+        )}
+      </Panel>
     </>
   );
 }

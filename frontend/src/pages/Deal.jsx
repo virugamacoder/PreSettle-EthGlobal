@@ -139,7 +139,7 @@ export default function Deal() {
             <button
               onClick={approve}
               disabled={!address || !isClient || !licensed || busy || !settings.arc.otc}
-              className="rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50"
+              className="rounded-full bg-brand-gradient px-4 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50"
             >
               {!address ? "Connect a wallet" : !licensed ? "Broker not verified" : busy ? "Confirm in your wallet…" : "Approve deal"}
             </button>

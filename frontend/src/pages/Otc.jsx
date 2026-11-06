@@ -1,17 +1,20 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { PageHeader, EmptyState } from "../components/PageHeader.jsx";
+import { PageHeader, Panel, PillTabs, SectionTitle, EmptyState } from "../components/PageHeader.jsx";
 import { MarketStats } from "../components/MarketStats.jsx";
 import { OrderList } from "../components/OrderList.jsx";
 import { useOrders } from "../hooks/useOrders.js";
 import { useTokens } from "../hooks/useTokens.js";
 import { orientation } from "../contracts/otc.js";
 
-const SIDES = [
+// Tabs are from the visitor's side: "Buy" shows makers who sell, "Sell" shows makers who buy.
+const TABS = [
   { value: "", label: "All" },
-  { value: "sell", label: "Selling" },
-  { value: "buy", label: "Buying" },
+  { value: "sell", label: "Buy" },
+  { value: "buy", label: "Sell" },
 ];
+
+const pill = "h-11 rounded-full border border-line bg-surface px-4 text-sm text-ink outline-none";
 
 export default function Otc() {
   const [side, setSide] = useState("");
@@ -45,7 +48,7 @@ export default function Otc() {
         title="OTC market"
         description="Peer-to-peer token deals in escrow on Arc. Every listing is an Arkiv entity owned by the maker's wallet and expires at its deadline."
         actions={
-          <Link to="/create" className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-accent-ink">
+          <Link to="/create" className="rounded-full bg-brand-gradient px-5 py-2 text-sm font-semibold text-accent-ink">
             Create order
           </Link>
         }
@@ -53,83 +56,68 @@ export default function Otc() {
 
       <MarketStats />
 
-      <div className="mb-4 flex flex-wrap items-end gap-3">
-        <div className="flex rounded-lg border border-line bg-surface p-1" role="tablist" aria-label="Side">
-          {SIDES.map((s) => (
+      <SectionTitle>Fast Track</SectionTitle>
+      <Panel
+        toolbar={
+          <>
+            <PillTabs tabs={TABS} value={side} onChange={setSide} label="Side" />
+            <select value={offerToken} onChange={(e) => setOfferToken(e.target.value)} className={pill} aria-label="Token">
+              <option value="">Any token</option>
+              {tokens.map((t) => (
+                <option key={t.address} value={t.address}>{t.symbol}</option>
+              ))}
+            </select>
+            <input
+              inputMode="decimal"
+              placeholder="Max price"
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(e.target.value.trim())}
+              className={`${pill} num w-36 placeholder:text-muted`}
+              aria-label="Max price"
+            />
             <button
-              key={s.value}
-              role="tab"
-              aria-selected={side === s.value}
-              onClick={() => setSide(s.value)}
-              className={`rounded-md px-3 py-1.5 text-sm ${side === s.value ? "bg-surface-2 text-ink" : "text-muted hover:text-ink"}`}
+              type="button"
+              onClick={() => setPartialOnly((v) => !v)}
+              aria-pressed={partialOnly}
+              className={`h-11 rounded-full border px-4 text-sm font-semibold ${partialOnly ? "border-accent bg-accent-soft text-ink" : "border-line bg-surface text-muted"}`}
             >
-              {s.label}
+              Partial fills only
             </button>
-          ))}
-        </div>
+          </>
+        }
+      >
+        {firstPage?.verification && firstPage.verification !== "arc" && (
+          <p className="mb-4 rounded-xl border border-warn/40 bg-warn/10 px-3 py-2 text-sm text-warn">
+            Listings are shown unverified: the OTC contract address isn't configured on the backend yet.
+          </p>
+        )}
 
-        <label className="flex flex-col gap-1 text-xs text-muted">
-          Token
-          <select
-            value={offerToken}
-            onChange={(e) => setOfferToken(e.target.value)}
-            className="rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink"
-          >
-            <option value="">Any token</option>
-            {tokens.map((t) => (
-              <option key={t.address} value={t.address}>{t.symbol}</option>
-            ))}
-          </select>
-        </label>
-
-        <label className="flex flex-col gap-1 text-xs text-muted">
-          Max price
-          <input
-            inputMode="decimal"
-            placeholder="e.g. 1.5"
-            value={maxPrice}
-            onChange={(e) => setMaxPrice(e.target.value.trim())}
-            className="num w-32 rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink"
-          />
-        </label>
-
-        <label className="flex items-center gap-2 pb-2 text-sm text-muted">
-          <input type="checkbox" checked={partialOnly} onChange={(e) => setPartialOnly(e.target.checked)} />
-          Partial fills only
-        </label>
-      </div>
-
-      {firstPage?.verification && firstPage.verification !== "arc" && (
-        <p className="mb-4 rounded-md border border-warn/40 bg-warn/10 px-3 py-2 text-sm text-warn">
-          Listings are shown unverified: the OTC contract address isn't configured on the backend yet.
-        </p>
-      )}
-
-      {isLoading ? (
-        <EmptyState title="Loading the order book…" />
-      ) : error ? (
-        <EmptyState title="Couldn't load orders">{error.message}</EmptyState>
-      ) : orders.length === 0 ? (
-        <EmptyState title="No open orders match">
-          <Link to="/create" className="text-accent hover:underline">Create the first order</Link>
-        </EmptyState>
-      ) : (
-        <>
-          <OrderList orders={orders} byAddress={byAddress} />
-          <div className="mt-4 flex items-center justify-between text-xs text-muted">
-            <span>{filteredOut > 0 && `${filteredOut} listing(s) hidden: failed on-chain verification`}</span>
-            {hasNextPage && (
-              <button
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-                className="rounded-md border border-line px-3 py-1.5 text-sm text-ink disabled:opacity-60"
-              >
-                {isFetchingNextPage ? "Loading…" : "Load more"}
-              </button>
-            )}
-          </div>
-        </>
-      )}
+        {isLoading ? (
+          <EmptyState title="Loading the order book…" compact />
+        ) : error ? (
+          <EmptyState title="Couldn't load the order book.">{error.message}</EmptyState>
+        ) : orders.length === 0 ? (
+          <EmptyState title="It seems no trades match right now.">
+            <Link to="/create" className="font-semibold text-accent hover:underline">Create the first order</Link>
+          </EmptyState>
+        ) : (
+          <>
+            <OrderList orders={orders} byAddress={byAddress} />
+            <div className="mt-4 flex items-center justify-between text-xs text-muted">
+              <span>{filteredOut > 0 && `${filteredOut} listing(s) hidden: failed on-chain verification`}</span>
+              {hasNextPage && (
+                <button
+                  onClick={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                  className="rounded-full border border-line bg-surface px-4 py-1.5 text-sm font-semibold text-ink disabled:opacity-60"
+                >
+                  {isFetchingNextPage ? "Loading…" : "Load more"}
+                </button>
+              )}
+            </div>
+          </>
+        )}
+      </Panel>
     </>
   );
 }

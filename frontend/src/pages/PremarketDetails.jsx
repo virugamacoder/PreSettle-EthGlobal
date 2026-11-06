@@ -154,7 +154,7 @@ export default function PremarketDetails() {
       <PageHeader
         title={`${o.symbol} premarket`}
         description={`Offer #${o.offerId} · priced in ${coll}`}
-        actions={<Link to="/" className="rounded-md border border-line px-3 py-2 text-sm">Back to Premarket</Link>}
+        actions={<Link to="/" className="rounded-full border border-line px-3 py-2 text-sm">Back to Premarket</Link>}
       />
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <section className="rounded-xl border border-line bg-surface p-5">
@@ -185,7 +185,7 @@ export default function PremarketDetails() {
                   You pay {collText(collateralFor(parseUnits(amount, PRE_TOKEN_DECIMALS), offer.pricePerToken))} {coll}
                 </p>
               )}
-              <button type="submit" disabled={!address || busy} className="rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50">
+              <button type="submit" disabled={!address || busy} className="rounded-full bg-brand-gradient px-4 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50">
                 {!address ? "Connect a wallet" : busy ? "Confirm in your wallet…" : `Buy ${o.symbol}`}
               </button>
               <p className="text-xs text-muted">If the seller doesn't deliver within the window after TGE, you can claim your payment back plus your share of the seller's collateral.</p>

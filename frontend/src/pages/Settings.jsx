@@ -19,7 +19,7 @@ import { settings } from "../config/env.js";
 import { isDecimal } from "../lib/amounts.js";
 
 const field = "rounded-md border border-line bg-page px-3 py-2 text-sm text-ink";
-const btn = "rounded-md bg-accent px-4 py-2 text-sm font-semibold text-accent-ink disabled:opacity-50";
+const btn = "rounded-full bg-brand-gradient px-4 py-2 text-sm font-semibold text-accent-ink disabled:opacity-50";
 const RESOLVER_ABI = parseAbi(["function setText(bytes name, string key, string value)"]);
 
 function Card({ title, description, children }) {
@@ -173,7 +173,7 @@ function BrokerPrefs() {
           <button
             onClick={() => setText("presettle.status", "active", "Unexpected: presettle.status was writable.")}
             disabled={busy || !licensed}
-            className="rounded-md border border-line px-4 py-2 text-sm disabled:opacity-50"
+            className="rounded-full border border-line px-4 py-2 text-sm disabled:opacity-50"
             title="Shows that ENSv2 access control blocks brokers from editing their license status"
           >
             Test permission: edit presettle.status

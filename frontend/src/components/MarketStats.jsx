@@ -1,55 +1,86 @@
+import { Link } from "react-router";
 import { useQuery } from "@tanstack/react-query";
+import { ActiveIcon, HotSellingIcon, TrendingIcon } from "../assets/icons/index.jsx";
 import { api } from "../lib/api.js";
 import { formatAmount, shortAddress } from "../lib/format.js";
 import { useTokens, tokenLabel } from "../hooks/useTokens.js";
 
-function Stat({ label, value, hint }) {
+export function useAnalytics() {
+  return useQuery({ queryKey: ["analytics"], queryFn: () => api.get("/analytics"), refetchInterval: 60_000 });
+}
+
+function StatCard({ Icon, title, rows }) {
   return (
-    <div className="rounded-xl border border-line bg-surface px-4 py-3">
-      <p className="text-xs uppercase tracking-wide text-muted">{label}</p>
-      <p className="num mt-1 text-xl font-semibold">{value}</p>
-      {hint && <p className="mt-0.5 text-xs text-muted">{hint}</p>}
+    <div className="rounded-2xl border border-line bg-surface-2 p-4">
+      <p className="flex items-center gap-2 text-sm font-semibold text-muted">
+        <span className="block h-4 w-4"><Icon /></span>
+        {title}
+      </p>
+      {rows.length ? (
+        <ul className="mt-3 flex flex-col gap-2">
+          {rows.map((r, i) => (
+            <li key={r.id} className="flex items-center justify-between gap-3 text-sm">
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="num w-4 text-muted">{i + 1}</span>
+                {r.to ? (
+                  <Link to={r.to} className="truncate font-semibold hover:underline">{r.label}</Link>
+                ) : (
+                  <span className="truncate font-semibold">{r.label}</span>
+                )}
+              </span>
+              <span className="num shrink-0 text-muted">{r.value}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="py-5 text-center text-[15px] font-semibold text-muted">No Data</p>
+      )}
     </div>
   );
 }
 
-/** Market banner: live counts, 24h volume, trending tokens (computed from Arkiv by the backend). */
+/** OTC overview in the original style: Top Most Active / Top Hot Selling / Top Trending. */
 export function MarketStats() {
   const { byAddress } = useTokens();
-  const { data, error } = useQuery({
-    queryKey: ["analytics"],
-    queryFn: () => api.get("/analytics"),
-    refetchInterval: 60_000,
-  });
+  const { data, error } = useAnalytics();
+  if (error) return null; // optional: the order book still works without it
 
-  if (error) return null; // the banner is optional; the order book still works
-  const volume = data?.volume24h ?? [];
   const label = (t) => (t.symbol ? t.symbol : tokenLabel(byAddress, t.token));
+  const active = (data?.activeMakers ?? []).slice(0, 3).map((m) => ({
+    id: m.address,
+    label: shortAddress(m.address),
+    value: `${m.listings} listing${m.listings === 1 ? "" : "s"}`,
+  }));
+  const hot = (data?.mostViewed ?? []).slice(0, 3).map((v) => ({
+    id: v.key,
+    label: `Order ${v.key.slice(0, 8)}…`,
+    to: `/otc/${v.key}`,
+    value: `👁 ${v.views}`,
+  }));
+  const trending = (data?.trending ?? []).slice(0, 3).map((t) => ({
+    id: t.token ?? t.symbol,
+    label: label(t),
+    value: `score ${t.score}`,
+  }));
+  const volume = data?.volume24h?.[0];
 
   return (
-    <section aria-label="Market statistics" className="mb-6 flex flex-col gap-3">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Open OTC orders" value={data ? data.openOrders : "–"} />
-        <Stat label="Premarket offers" value={data ? data.premarketOffers : "–"} />
-        <Stat label="Fills (24h)" value={data ? data.fills24h : "–"} hint={data ? `${data.fills7d} in 7 days` : null} />
-        <Stat
-          label="Volume (24h)"
-          value={volume.length ? formatAmount(volume[0].notional) : data ? "0" : "–"}
-          hint={volume.length ? tokenLabel(byAddress, volume[0].quoteToken) : null}
-        />
+    <section aria-label="Market statistics" className="mb-8">
+      <div className="grid gap-4 md:grid-cols-3">
+        <StatCard Icon={ActiveIcon} title="Top Most Active" rows={active} />
+        <StatCard Icon={HotSellingIcon} title="Top Hot Selling" rows={hot} />
+        <StatCard Icon={TrendingIcon} title="Top Trending" rows={trending} />
       </div>
-      {data?.trending?.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="text-muted">Trending:</span>
-          {data.trending.map((t, i) => (
-            <span key={t.token ?? t.symbol} className="rounded-full border border-line bg-surface px-3 py-1">
-              <span className="text-muted">#{i + 1}</span> {label(t)}
-            </span>
-          ))}
-          {data.activeMakers?.[0] && (
-            <span className="ml-auto text-xs text-muted">Most active maker: {shortAddress(data.activeMakers[0].address)}</span>
-          )}
-        </div>
+      {data && (
+        <p className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted">
+          <span><span className="num font-semibold text-ink">{data.openOrders}</span> open orders</span>
+          <span><span className="num font-semibold text-ink">{data.premarketOffers}</span> premarket offers</span>
+          <span><span className="num font-semibold text-ink">{data.fills24h}</span> fills in 24h</span>
+          <span>
+            <span className="num font-semibold text-ink">{volume ? formatAmount(volume.notional) : "0"}</span>{" "}
+            {volume ? tokenLabel(byAddress, volume.quoteToken) : "USDC"} volume in 24h
+          </span>
+        </p>
       )}
     </section>
   );
