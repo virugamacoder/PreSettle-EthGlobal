@@ -174,8 +174,9 @@ function Markets() {
   );
 }
 
-function TokenList() {
+function TokenList({ token: sessionToken }) {
   const config = useConfig();
+  const [logo, setLogo] = useState(null);
   const { address } = useAccount();
   const [token, setToken] = useState("");
   const [kind, setKind] = useState("otc");
@@ -190,10 +191,12 @@ function TokenList() {
       await switchChain(config, { chainId: arcTestnet.id });
       const read = (functionName) => readContract(config, { chainId: arcTestnet.id, address: token, abi: erc20Abi, functionName });
       const [symbol, name, decimals] = await Promise.all([read("symbol"), read("name"), read("decimals")]);
+      // Optional logo: uploaded to the backend, its URL stored in the Arkiv entity.
+      const logoUrl = logo ? (await api.upload("/admin/uploads", logo, sessionToken)).url : null;
       const arkiv = await getArkivWallet(config);
       const { entityKey } = await arkiv.createEntity(
         Token,
-        { kind, address: addr(token), symbol, name: name.slice(0, 120), decimals: u64(BigInt(decimals)) },
+        { kind, address: addr(token), symbol, name: name.slice(0, 120), decimals: u64(BigInt(decimals)), ...(logoUrl ? { logo: logoUrl } : {}) },
         { expiration: ExpirationTime.max() },
       );
       setStatus({ ok: true, text: `${symbol} published to the token list (${arkivExplorer.entity(entityKey)})` });
@@ -216,6 +219,11 @@ function TokenList() {
         </select>
         <button onClick={publish} disabled={busy || !isListAdmin || !isAddress(token)} className={btn}>Publish</button>
       </div>
+      <label className="mt-3 flex flex-wrap items-center gap-3 text-sm text-muted">
+        Logo (optional, PNG/JPEG/WebP/GIF, max 512 KB)
+        <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => setLogo(e.target.files?.[0] ?? null)} className="text-xs" />
+        {logo && <img src={URL.createObjectURL(logo)} alt="" className="h-8 w-8 rounded-full object-cover" />}
+      </label>
       <Status value={status} />
     </Section>
   );
@@ -245,7 +253,7 @@ export default function Admin() {
           </div>
           {session.admin && <BrokerLicenses token={session.token} />}
           <Markets />
-          <TokenList />
+          <TokenList token={session.token} />
         </div>
       )}
     </>

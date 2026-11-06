@@ -9,6 +9,7 @@ import { analyticsRouter } from "./routes/analytics.js";
 import { viewsRouter } from "./routes/views.js";
 import { authRouter } from "./routes/auth.js";
 import { adminBrokersRouter, brokersRouter } from "./routes/brokers.js";
+import { uploadsDir, uploadsRouter } from "./routes/uploads.js";
 
 export function createApp() {
   const app = express();
@@ -16,7 +17,8 @@ export function createApp() {
   app.disable("x-powered-by");
   // Behind nginx: use X-Forwarded-For for the visitor IP (view de-duplication).
   app.set("trust proxy", 1);
-  app.use(helmet());
+  // Uploaded logos are shown by the frontend on another origin, so allow cross-origin <img> loads.
+  app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
   app.use(cors(config.corsOrigins.length ? { origin: config.corsOrigins } : undefined));
   app.use(express.json({ limit: "1mb" }));
 
@@ -59,6 +61,8 @@ export function createApp() {
   app.use("/v1/auth", authRouter);
   app.use("/v1/brokers", brokersRouter);
   app.use("/v1/admin/brokers", adminBrokersRouter);
+  app.use("/v1/admin/uploads", uploadsRouter);
+  app.use("/uploads", express.static(uploadsDir(), { immutable: true, maxAge: "7d", index: false }));
 
   app.use((req, res) => {
     res.status(404).json({ status: "fail", message: "Not found" });

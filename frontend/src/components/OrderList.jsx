@@ -34,6 +34,11 @@ export function ArkivBadge({ entityKey }) {
   );
 }
 
+function TokenIcon({ token }) {
+  if (!token?.logo) return null;
+  return <img src={token.logo} alt="" loading="lazy" className="h-5 w-5 rounded-full object-cover" />;
+}
+
 /** Price is quote per 1 base; amount is in base (see contracts/otc.js). */
 function describe(order, byAddress) {
   const { base, quote } = orientation(order);
@@ -66,7 +71,12 @@ export function OrderList({ orders, byAddress }) {
                 <td className="px-4 py-3">
                   <Pill tone={o.side === "sell" ? "sell" : "buy"}>{o.side === "sell" ? "Selling" : "Buying"}</Pill>
                 </td>
-                <td className="px-4 py-3 font-medium">{d.pair}</td>
+                <td className="px-4 py-3 font-medium">
+                  <span className="flex items-center gap-2">
+                    <TokenIcon token={byAddress[orientation(o).base?.toLowerCase()]} />
+                    {d.pair}
+                  </span>
+                </td>
                 <td className="num px-4 py-3 text-right">
                   {formatAmount(o.price)} <span className="text-muted">{d.want}</span>
                 </td>
