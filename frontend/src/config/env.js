@@ -4,7 +4,7 @@ const env = import.meta.env;
 const asAddress = (v) => (v && /^0x[a-fA-F0-9]{40}$/.test(v) ? v : null);
 
 export const settings = {
-  // Backend API base, including /v1 (e.g. https://13.207.134.130.nip.io/v1)
+  // Backend API base, including /v1 (e.g. https://3.109.65.92.nip.io/v1)
   apiBaseUrl: (env.VITE_BASE_URL || "http://localhost:3000/v1").replace(/\/$/, ""),
   walletConnectProjectId: env.VITE_WALLETCONNECT_PROJECT_ID || "",
 

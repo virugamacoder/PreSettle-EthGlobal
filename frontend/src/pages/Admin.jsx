@@ -7,6 +7,7 @@ import { addr, u64 } from "@arkiv-network/sdk/schema";
 import { PageHeader, EmptyState } from "../components/PageHeader.jsx";
 import { WalletButton } from "../components/Header.jsx";
 import { BrokerBadge } from "../components/BrokerBadge.jsx";
+import { ConfigCheck } from "../components/ConfigCheck.jsx";
 import { errorMessage } from "../components/TxSteps.jsx";
 import { useAdminSession } from "../hooks/useAdminSession.js";
 import { useMarkets } from "../hooks/usePremarket.js";
@@ -241,6 +242,7 @@ export default function Admin() {
   return (
     <>
       <PageHeader title="Admin" description="Broker licenses, premarket markets and the curated token list." />
+      <ConfigCheck />
       {!isConnected ? (
         <EmptyState title="Connect an admin wallet"><div className="mt-4 flex justify-center"><WalletButton /></div></EmptyState>
       ) : !session ? (
