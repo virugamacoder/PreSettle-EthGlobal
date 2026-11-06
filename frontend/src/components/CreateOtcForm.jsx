@@ -1,18 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { erc20Abi, isAddress, parseEventLogs, parseUnits, zeroAddress } from "viem";
+import { isAddress } from "viem";
 import { useAccount, useConfig, useEnsName } from "wagmi";
-import { readContract, switchChain, waitForTransactionReceipt, writeContract } from "wagmi/actions";
-import { ExpirationTime } from "@arkiv-network/sdk";
-import { addr, dec, u64 } from "@arkiv-network/sdk/schema";
-import { arcTestnet, sepolia } from "../config/wagmi.js";
+import { sepolia } from "../config/wagmi.js";
 import { settings } from "../config/env.js";
-import { OTC_ABI } from "../contracts/otc.js";
-import { OtcOrder } from "../arkiv/schemas.js";
-import { getArkivWallet } from "../arkiv/wallet.js";
 import { arkivExplorer } from "../arkiv/client.js";
-import { arcExplorer, formatAmount } from "../lib/format.js";
-import { isDecimal, mulDecimal, mulToUnits } from "../lib/amounts.js";
+import { formatAmount } from "../lib/format.js";
+import { isDecimal, mulDecimal } from "../lib/amounts.js";
+import { CREATE_STEPS, createOtcOrder } from "../lib/otcActions.js";
 import { useTokens } from "../hooks/useTokens.js";
 import { TxSteps, errorMessage, initSteps, updateStep } from "./TxSteps.jsx";
 
@@ -21,12 +16,6 @@ const DURATIONS = [
   { label: "24 hours", seconds: 86_400 },
   { label: "3 days", seconds: 259_200 },
   { label: "7 days", seconds: 604_800 },
-];
-
-const STEP_DEFS = [
-  { id: "approve", label: "Approve token", chain: "Arc" },
-  { id: "create", label: "Lock tokens in escrow", chain: "Arc" },
-  { id: "publish", label: "Publish listing to the order book", chain: "Arkiv" },
 ];
 
 const field = "rounded-md border border-line bg-page px-3 py-2 text-sm text-ink";
@@ -66,86 +55,29 @@ export function CreateOtcForm() {
     if (!valid || busy) return;
     setBusy(true);
     setResult(null);
-    let s = initSteps(STEP_DEFS);
+    let s = initSteps(CREATE_STEPS);
     const set = (id, patch) => setSteps((s = updateStep(s, id, patch)));
     setSteps(s);
-    let step = "approve";
 
     try {
-      await switchChain(config, { chainId: arcTestnet.id });
-      const decimalsOf = (token) =>
-        readContract(config, { chainId: arcTestnet.id, address: token, abi: erc20Abi, functionName: "decimals" });
-      const [baseDecimals, quoteDecimals] = await Promise.all([decimalsOf(baseAddress), decimalsOf(quote)]);
-
-      // sell: offer base, want quote. buy: offer quote, want base.
-      const baseUnits = parseUnits(amount, baseDecimals);
-      const quoteUnits = mulToUnits(amount, price, quoteDecimals);
-      const [offerToken, offerAmount, wantToken, wantAmount] =
-        side === "sell" ? [baseAddress, baseUnits, quote, quoteUnits] : [quote, quoteUnits, baseAddress, baseUnits];
-      const deadline = Math.floor(Date.now() / 1000) + duration;
-
-      // 1. Approve
-      set("approve", { status: "active" });
-      const balance = await readContract(config, {
-        chainId: arcTestnet.id, address: offerToken, abi: erc20Abi, functionName: "balanceOf", args: [address],
-      });
-      if (balance < offerAmount) throw new Error("Insufficient balance for this order");
-      const allowance = await readContract(config, {
-        chainId: arcTestnet.id, address: offerToken, abi: erc20Abi, functionName: "allowance", args: [address, settings.arc.otc],
-      });
-      if (allowance < offerAmount) {
-        const hash = await writeContract(config, {
-          chainId: arcTestnet.id, address: offerToken, abi: erc20Abi, functionName: "approve", args: [settings.arc.otc, offerAmount],
-        });
-        await waitForTransactionReceipt(config, { chainId: arcTestnet.id, hash });
-        set("approve", { status: "done", link: arcExplorer.tx(hash) });
-      } else {
-        set("approve", { status: "skipped", label: "Approve token (already approved)" });
-      }
-
-      // 2. Create the order in escrow; the id comes from the OrderCreated event.
-      step = "create";
-      set("create", { status: "active" });
-      const createHash = await writeContract(config, {
-        chainId: arcTestnet.id,
-        address: settings.arc.otc,
-        abi: OTC_ABI,
-        functionName: "createOrder",
-        args: [{ offerToken, offerAmount, wantToken, wantAmount, partialAllowed: partial, deadline: BigInt(deadline), privateTaker: zeroAddress, broker: zeroAddress, brokerFeeBps: 0 }],
-      });
-      const receipt = await waitForTransactionReceipt(config, { chainId: arcTestnet.id, hash: createHash });
-      const [created] = parseEventLogs({ abi: OTC_ABI, eventName: "OrderCreated", logs: receipt.logs });
-      if (!created) throw new Error("Order created but no OrderCreated event was found");
-      const orderId = created.args.orderId;
-      set("create", { status: "done", link: arcExplorer.tx(createHash) });
-
-      // 3. Publish the listing on Arkiv, owned by the maker, expiring at the deadline.
-      step = "publish";
-      set("publish", { status: "active" });
-      const arkiv = await getArkivWallet(config);
-      const { entityKey, txHash } = await arkiv.createEntity(
-        OtcOrder,
+      const created = await createOtcOrder(
+        config,
         {
-          maker: addr(address),
+          maker: address,
+          makerEns: ensName,
           side,
-          offerToken: addr(offerToken),
-          wantToken: addr(wantToken),
-          price: dec(price),
-          amount: dec(amount),
+          base: baseAddress,
+          quote,
+          amount,
+          price,
           partial,
-          orderId: u64(orderId),
-          deadline: u64(BigInt(deadline)),
-          arcTx: createHash,
-          ...(ensName ? { makerEns: ensName } : {}),
+          deadline: Math.floor(Date.now() / 1000) + duration,
         },
-        { expiration: ExpirationTime.atDate(new Date(deadline * 1000)) },
+        set,
       );
-      set("publish", { status: "done", link: arkivExplorer.tx(txHash) });
-      setResult({ entityKey, orderId: orderId.toString() });
-
-      await switchChain(config, { chainId: arcTestnet.id }).catch(() => {});
+      setResult(created);
     } catch (err) {
-      set(step, { status: "error", error: errorMessage(err) });
+      set(err.step ?? "approve", { status: "error", error: errorMessage(err) });
     } finally {
       setBusy(false);
     }
