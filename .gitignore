@@ -1,0 +1,28 @@
+# dependencies
+node_modules/
+
+# secrets — never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# build output
+dist/
+build/
+out/
+.vercel/
+
+# foundry / hardhat
+cache/
+broadcast/
+artifacts/
+typechain-types/
+coverage/
+
+# os / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
