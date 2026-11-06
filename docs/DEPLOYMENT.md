@@ -28,7 +28,7 @@ The repo must be **public** for judging.
 1. vercel.com → **Add New → Project** → import `pre-settle-eth-global`
 2. **Root Directory: `frontend`**. This is the key setting for a single repo.
 3. Framework preset: **Vite** (build `vite build`, output `dist`)
-4. Environment variables (copy from `frontend/.env.example` once it exists):
+4. Environment variables (full list in `frontend/.env.example`):
 
    | Key | Value |
    |---|---|
@@ -37,6 +37,9 @@ The repo must be **public** for judging.
    | `VITE_ARKIV_ACCESS_KEY` | from hub.arkiv.network (add the Vercel domain to the key's **Origins**) |
    | `VITE_OTC_CONTRACT_ARC_TESTNET`, `VITE_PREMARKET_CONTRACT_ARC_TESTNET`, … | contract addresses from Arc Studio |
    | `VITE_SEPOLIA_RPC_URL` | Sepolia RPC (ENS) |
+   | `VITE_ARKIV_ADMIN_ADDRESS` | wallet that publishes the curated token list |
+   | `VITE_ENS_PARENT_NAME` | `settlex.eth` (or the parent name you registered) |
+   | `VITE_ARC_TESTNET_RPC_URL` | optional, defaults to `https://rpc.testnet.arc.io` |
 
 5. Add `frontend/vercel.json` so page refreshes don't return 404:
    ```json

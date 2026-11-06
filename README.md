@@ -10,7 +10,7 @@
 
 ## Status
 
-🚧 In progress.
+🚧 In progress. Backend and frontend are built; the smart contracts are being built in Arc Studio. See [docs/CONTRACT_INTERFACE.md](docs/CONTRACT_INTERFACE.md) for what the app expects from them.
 
 ## Prize tracks
 
