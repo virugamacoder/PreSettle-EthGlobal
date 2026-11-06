@@ -5,6 +5,7 @@ import { config, features } from "./config.js";
 import { chainStatus, platformAccount } from "./chains.js";
 import { ordersRouter } from "./routes/orders.js";
 import { authRouter } from "./routes/auth.js";
+import { adminBrokersRouter, brokersRouter } from "./routes/brokers.js";
 
 export function createApp() {
   const app = express();
@@ -45,6 +46,8 @@ export function createApp() {
 
   app.use("/v1/orders", ordersRouter);
   app.use("/v1/auth", authRouter);
+  app.use("/v1/brokers", brokersRouter);
+  app.use("/v1/admin/brokers", adminBrokersRouter);
 
   app.use((req, res) => {
     res.status(404).json({ status: "fail", message: "Not found" });
@@ -53,10 +56,11 @@ export function createApp() {
   // eslint-disable-next-line no-unused-vars
   app.use((err, req, res, next) => {
     const status = err.status || 500;
-    if (status >= 500) console.error(err);
+    // Unexpected errors are logged and hidden; deliberate ones (expose) are returned as-is.
+    if (!err.expose && status >= 500) console.error(err);
     res.status(status).json({
-      status: "error",
-      message: status >= 500 ? "Internal server error" : err.message,
+      status: status >= 500 ? "error" : "fail",
+      message: err.expose || status < 500 ? err.message : "Internal server error",
     });
   });
 

@@ -72,6 +72,7 @@ export function requireAdmin(req, res, next) {
   next();
 }
 
+// Errors we raise on purpose: their message is safe to send to the client.
 export function httpError(status, message) {
-  return Object.assign(new Error(message), { status });
+  return Object.assign(new Error(message), { status, expose: true });
 }
