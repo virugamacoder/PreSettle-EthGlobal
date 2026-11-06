@@ -10,7 +10,7 @@
 
 ## Status
 
-🚧 In progress. See [docs/HACKATHON_LOG.md](docs/HACKATHON_LOG.md) for a dated log of the work.
+🚧 In progress.
 
 ## Prize tracks
 
@@ -30,7 +30,7 @@
 | [ens/](ens/) | ENSv2 setup scripts (Sepolia) |
 | [scripts/](scripts/) | Arkiv seed and query scripts |
 | [arkiv/](arkiv/) | Arkiv judging documents |
-| [docs/](docs/) | Build plan, architecture, hackathon log |
+| [docs/](docs/) | Build plan and architecture |
 
 ## Links
 
