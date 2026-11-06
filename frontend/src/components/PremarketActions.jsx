@@ -9,6 +9,7 @@ import { arcTestnet } from "../config/wagmi.js";
 import { settings } from "../config/env.js";
 import { arcExplorer } from "../lib/format.js";
 import { TxSteps, errorMessage, initSteps, updateStep } from "./TxSteps.jsx";
+import { switchAndWait } from "../lib/chain.js";
 
 const ZERO = "0x0000000000000000000000000000000000000000";
 
@@ -34,7 +35,7 @@ export function PremarketActions({ listing, offer, market, phase, isSeller, purc
     const set = (id, patch) => setSteps((s = updateStep(s, id, patch)));
     setSteps(s);
     try {
-      await switchChain(config, { chainId: arcTestnet.id });
+      await switchAndWait(config, arcTestnet.id);
       await fn(set);
       onDone?.();
     } catch (err) {

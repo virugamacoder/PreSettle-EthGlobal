@@ -17,6 +17,7 @@ import { getArkivWallet } from "../arkiv/wallet.js";
 import { arcTestnet, sepolia } from "../config/wagmi.js";
 import { settings } from "../config/env.js";
 import { isDecimal } from "../lib/amounts.js";
+import { switchAndWait } from "../lib/chain.js";
 
 const field = "rounded-md border border-line bg-page px-3 py-2 text-sm text-ink";
 const btn = "rounded-full bg-brand-gradient px-4 py-2 text-sm font-semibold text-accent-ink disabled:opacity-50";
@@ -133,7 +134,7 @@ function BrokerPrefs() {
     setStatus(null);
     try {
       const name = normalize(brokerName(clean));
-      await switchChain(config, { chainId: sepolia.id });
+      await switchAndWait(config, sepolia.id);
       const client = getPublicClient(config, { chainId: sepolia.id });
       const resolver = await client.getEnsResolver({ name });
       const hash = await writeContract(config, {

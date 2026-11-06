@@ -10,6 +10,7 @@ import { getArkivWallet } from "../arkiv/wallet.js";
 import { arkivExplorer } from "../arkiv/client.js";
 import { arcExplorer } from "./format.js";
 import { mulToUnits } from "./amounts.js";
+import { switchAndWait } from "./chain.js";
 
 export const CREATE_STEPS = [
   { id: "approve", label: "Approve token", chain: "Arc" },
@@ -28,7 +29,7 @@ export const CREATE_STEPS = [
 export async function createOtcOrder(config, p, set) {
   let step = "approve";
   try {
-    await switchChain(config, { chainId: arcTestnet.id });
+    await switchAndWait(config, arcTestnet.id);
     const decimalsOf = (token) => readContract(config, { chainId: arcTestnet.id, address: token, abi: erc20Abi, functionName: "decimals" });
     const [baseDecimals, quoteDecimals] = await Promise.all([decimalsOf(p.base), decimalsOf(p.quote)]);
     const baseUnits = parseUnits(p.amount, baseDecimals);

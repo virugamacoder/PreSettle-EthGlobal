@@ -20,6 +20,7 @@ import { arcTestnet } from "../config/wagmi.js";
 import { settings } from "../config/env.js";
 import { arcExplorer, formatAmount, shortAddress, timeLeft } from "../lib/format.js";
 import { isDecimal } from "../lib/amounts.js";
+import { switchAndWait } from "../lib/chain.js";
 
 const ceilDiv = (a, b) => (a + b - 1n) / b;
 
@@ -95,7 +96,7 @@ export default function OtcDetails() {
     setSteps(s);
     let step = "approve";
     try {
-      await switchChain(config, { chainId: arcTestnet.id });
+      await switchAndWait(config, arcTestnet.id);
       const baseUnits = parseUnits(fillText, baseDec);
       if (baseUnits > remainingBase) throw new Error("Amount is more than what's left on this order");
 
@@ -175,7 +176,7 @@ export default function OtcDetails() {
     setSteps(s);
     let step = "cancel";
     try {
-      await switchChain(config, { chainId: arcTestnet.id });
+      await switchAndWait(config, arcTestnet.id);
       set("cancel", { status: "active" });
       const hash = await writeContract(config, {
         chainId: arcTestnet.id, address: settings.arc.otc, abi: OTC_ABI, functionName: "cancel", args: [BigInt(order.orderId)],

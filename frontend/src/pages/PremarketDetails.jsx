@@ -20,6 +20,7 @@ import { arcTestnet } from "../config/wagmi.js";
 import { settings } from "../config/env.js";
 import { arcExplorer, formatAmount, shortAddress, timeLeft } from "../lib/format.js";
 import { isDecimal } from "../lib/amounts.js";
+import { switchAndWait } from "../lib/chain.js";
 
 function Row({ label, children }) {
   return (
@@ -89,7 +90,7 @@ export default function PremarketDetails() {
     setSteps(s);
     let step = "approve";
     try {
-      await switchChain(config, { chainId: arcTestnet.id });
+      await switchAndWait(config, arcTestnet.id);
       const tokenAmount = parseUnits(amount, PRE_TOKEN_DECIMALS);
       if (tokenAmount > available) throw new Error("More than what's available on this offer");
       const pay = collateralFor(tokenAmount, offer.pricePerToken);

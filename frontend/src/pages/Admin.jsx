@@ -23,6 +23,7 @@ import { arcTestnet } from "../config/wagmi.js";
 import { settings } from "../config/env.js";
 import { api } from "../lib/api.js";
 import { arcExplorer, shortAddress } from "../lib/format.js";
+import { switchAndWait } from "../lib/chain.js";
 
 const field = "rounded-md border border-line bg-page px-3 py-2 text-sm text-ink";
 const btn = "rounded-full bg-brand-gradient px-4 py-2 text-sm font-semibold text-accent-ink disabled:opacity-50";
@@ -112,7 +113,7 @@ function useArcSend(onDone) {
     setBusy(true);
     setStatus(null);
     try {
-      await switchChain(config, { chainId: arcTestnet.id });
+      await switchAndWait(config, arcTestnet.id);
       const hash = await writeContract(config, { chainId: arcTestnet.id, address, abi, functionName, args });
       await waitForTransactionReceipt(config, { chainId: arcTestnet.id, hash });
       setStatus({ ok: true, text: `${doneText} (${arcExplorer.tx(hash)})` });
@@ -353,7 +354,7 @@ function TokenList({ token: sessionToken }) {
     setBusy(true);
     setStatus(null);
     try {
-      await switchChain(config, { chainId: arcTestnet.id });
+      // Token details are read from Arc through the public RPC: no wallet switch needed here.
       const read = (functionName) => readContract(config, { chainId: arcTestnet.id, address: token, abi: erc20Abi, functionName });
       const [symbol, name, decimals] = await Promise.all([read("symbol"), read("name"), read("decimals")]);
       // Optional logo: uploaded to the backend, its URL stored in the Arkiv entity.

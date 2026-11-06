@@ -1,6 +1,7 @@
 import { custom } from "viem";
 import { createWalletClient } from "@arkiv-network/sdk";
-import { getWalletClient, switchChain } from "wagmi/actions";
+import { getWalletClient } from "wagmi/actions";
+import { switchAndWait } from "../lib/chain.js";
 import { arkivWalletChain } from "../config/wagmi.js";
 
 /**
@@ -9,7 +10,7 @@ import { arkivWalletChain } from "../config/wagmi.js";
  * Built from wagmi's connection: the Arkiv docs say not to use window.ethereum.
  */
 export async function getArkivWallet(wagmiConfig) {
-  await switchChain(wagmiConfig, { chainId: arkivWalletChain.id });
+  await switchAndWait(wagmiConfig, arkivWalletChain.id);
   const wc = await getWalletClient(wagmiConfig, { chainId: arkivWalletChain.id });
   return createWalletClient({ chain: arkivWalletChain, transport: custom(wc.transport), account: wc.account });
 }

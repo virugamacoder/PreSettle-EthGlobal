@@ -16,6 +16,7 @@ import { isDecimal, mulDecimal } from "../lib/amounts.js";
 import { useMarkets } from "../hooks/usePremarket.js";
 import { useTokens } from "../hooks/useTokens.js";
 import { TxSteps, errorMessage, initSteps, updateStep } from "./TxSteps.jsx";
+import { switchAndWait } from "../lib/chain.js";
 
 const field = "rounded-md border border-line bg-page px-3 py-2 text-sm text-ink";
 const MAX_ARKIV_SECONDS = 180 * 86_400; // Arkiv max lifetime is ~182.5 days
@@ -59,7 +60,7 @@ export function CreatePremarketForm() {
     setSteps(s);
     let step = "approve";
     try {
-      await switchChain(config, { chainId: arcTestnet.id });
+      await switchAndWait(config, arcTestnet.id);
       const collDecimals = await readContract(config, { chainId: arcTestnet.id, address: collateral, abi: erc20Abi, functionName: "decimals" });
       const tokenAmount = parseUnits(amount, PRE_TOKEN_DECIMALS);
       const pricePerToken = parseUnits(price, collDecimals);

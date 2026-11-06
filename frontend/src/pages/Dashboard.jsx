@@ -18,6 +18,7 @@ import { arkivExplorer } from "../arkiv/client.js";
 import { arcTestnet } from "../config/wagmi.js";
 import { settings } from "../config/env.js";
 import { arcExplorer, formatAmount, shortAddress } from "../lib/format.js";
+import { switchAndWait } from "../lib/chain.js";
 
 const TABS = [
   { id: "orders", label: "My orders" },
@@ -108,7 +109,7 @@ function Balances({ address }) {
     const id = escrow.name + token.address;
     setStatus((s) => ({ ...s, [id]: "pending" }));
     try {
-      await switchChain(config, { chainId: arcTestnet.id });
+      await switchAndWait(config, arcTestnet.id);
       const hash = await writeContract(config, {
         chainId: arcTestnet.id, address: escrow.address, abi: escrow.abi, functionName: "withdraw", args: [token.address],
       });
