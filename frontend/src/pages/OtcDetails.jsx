@@ -53,6 +53,7 @@ export default function OtcDetails() {
 
   const [amount, setAmount] = useState("");
   const [steps, setSteps] = useState(null);
+  const [retry, setRetry] = useState(null);
   const [busy, setBusy] = useState(false);
 
   if (listing.isLoading) return <EmptyState title="Loading order…" />;
@@ -94,7 +95,9 @@ export default function OtcDetails() {
     ]);
     const set = (id, patch) => setSteps((s = updateStep(s, id, patch)));
     setSteps(s);
+    setRetry(null);
     let step = "approve";
+    let arkivStep = null;
     try {
       await switchAndWait(config, arcTestnet.id);
       const baseUnits = parseUnits(fillText, baseDec);
@@ -138,6 +141,7 @@ export default function OtcDetails() {
 
       // Read-only Arkiv record: an immutable, public track record of the trade.
       step = "record";
+      arkivStep = async () => {
       set("record", { status: "active" });
       const arkiv = await getArkivWallet(config);
       const { txHash } = await arkiv.createEntity(
@@ -158,8 +162,24 @@ export default function OtcDetails() {
       );
       set("record", { status: "done", link: arkivExplorer.tx(txHash) });
       await switchChain(config, { chainId: arcTestnet.id }).catch(() => {});
+      };
+      await arkivStep();
     } catch (err) {
       set(step, { status: "error", error: errorMessage(err) });
+      if (step === "record" && arkivStep) {
+        const again = arkivStep;
+        setRetry(() => async () => {
+          setBusy(true);
+          try {
+            await again();
+            setRetry(null);
+          } catch (e) {
+            set("record", { status: "error", error: errorMessage(e) });
+          } finally {
+            setBusy(false);
+          }
+        });
+      }
     } finally {
       setBusy(false);
     }
@@ -168,6 +188,7 @@ export default function OtcDetails() {
   async function cancel() {
     if (busy) return;
     setBusy(true);
+    setRetry(null);
     let s = initSteps([
       { id: "cancel", label: "Cancel and refund", chain: "Arc" },
       { id: "delete", label: "Remove the listing", chain: "Arkiv" },
@@ -265,7 +286,7 @@ export default function OtcDetails() {
               </button>
             </form>
           )}
-          {steps && <TxSteps steps={steps} />}
+          {steps && <TxSteps steps={steps} onRetry={retry} busy={busy} />}
         </aside>
       </div>
     </>

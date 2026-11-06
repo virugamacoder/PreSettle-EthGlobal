@@ -57,6 +57,7 @@ export default function PremarketDetails() {
 
   const [amount, setAmount] = useState("");
   const [steps, setSteps] = useState(null);
+  const [retry, setRetry] = useState(null);
   const [busy, setBusy] = useState(false);
 
   if (listing.isLoading) return <EmptyState title="Loading offer…" />;
@@ -88,7 +89,9 @@ export default function PremarketDetails() {
     ]);
     const set = (id, patch) => setSteps((s = updateStep(s, id, patch)));
     setSteps(s);
+    setRetry(null);
     let step = "approve";
+    let arkivStep = null;
     try {
       await switchAndWait(config, arcTestnet.id);
       const tokenAmount = parseUnits(amount, PRE_TOKEN_DECIMALS);
@@ -120,6 +123,7 @@ export default function PremarketDetails() {
       purchase.refetch();
 
       step = "record";
+      arkivStep = async () => {
       set("record", { status: "active" });
       const arkiv = await getArkivWallet(config);
       const { txHash } = await arkiv.createEntity(
@@ -140,8 +144,24 @@ export default function PremarketDetails() {
       );
       set("record", { status: "done", link: arkivExplorer.tx(txHash) });
       await switchChain(config, { chainId: arcTestnet.id }).catch(() => {});
+      };
+      await arkivStep();
     } catch (err) {
       set(step, { status: "error", error: errorMessage(err) });
+      if (step === "record" && arkivStep) {
+        const again = arkivStep;
+        setRetry(() => async () => {
+          setBusy(true);
+          try {
+            await again();
+            setRetry(null);
+          } catch (e) {
+            set("record", { status: "error", error: errorMessage(e) });
+          } finally {
+            setBusy(false);
+          }
+        });
+      }
     } finally {
       setBusy(false);
     }
@@ -202,7 +222,7 @@ export default function PremarketDetails() {
           ) : (
             <PremarketActions listing={o} offer={offer} market={market} phase={phase} isSeller={isSeller} purchase={purchase.data} onDone={() => (offerQ.refetch(), purchase.refetch())} />
           )}
-          {steps && <TxSteps steps={steps} />}
+          {steps && <TxSteps steps={steps} onRetry={retry} busy={busy} />}
         </aside>
       </div>
     </>

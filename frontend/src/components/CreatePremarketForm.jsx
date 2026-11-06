@@ -35,6 +35,7 @@ export function CreatePremarketForm() {
   const [amount, setAmount] = useState("");
   const [price, setPrice] = useState("");
   const [steps, setSteps] = useState(null);
+  const [retry, setRetry] = useState(null);
   const [result, setResult] = useState(null);
   const [busy, setBusy] = useState(false);
 
@@ -58,7 +59,9 @@ export function CreatePremarketForm() {
     ]);
     const set = (id, patch) => setSteps((s = updateStep(s, id, patch)));
     setSteps(s);
+    setRetry(null);
     let step = "approve";
+    let arkivStep = null;
     try {
       await switchAndWait(config, arcTestnet.id);
       const collDecimals = await readContract(config, { chainId: arcTestnet.id, address: collateral, abi: erc20Abi, functionName: "decimals" });
@@ -96,6 +99,7 @@ export function CreatePremarketForm() {
 
       // The listing lives until the delivery window closes (capped at Arkiv's max lifetime).
       step = "publish";
+      arkivStep = async () => {
       set("publish", { status: "active" });
       const end = Number(market.tge) + Number(market.deliveryWindow);
       const expiration = end - Date.now() / 1000 > MAX_ARKIV_SECONDS ? ExpirationTime.max() : ExpirationTime.atDate(new Date(end * 1000));
@@ -118,8 +122,24 @@ export function CreatePremarketForm() {
       set("publish", { status: "done", link: arkivExplorer.tx(txHash) });
       setResult({ entityKey, offerId: offerId.toString() });
       await switchChain(config, { chainId: arcTestnet.id }).catch(() => {});
+      };
+      await arkivStep();
     } catch (err) {
       set(step, { status: "error", error: errorMessage(err) });
+      if (step === "publish" && arkivStep) {
+        const again = arkivStep;
+        setRetry(() => async () => {
+          setBusy(true);
+          try {
+            await again();
+            setRetry(null);
+          } catch (e) {
+            set("publish", { status: "error", error: errorMessage(e) });
+          } finally {
+            setBusy(false);
+          }
+        });
+      }
     } finally {
       setBusy(false);
     }
@@ -165,7 +185,7 @@ export function CreatePremarketForm() {
           <p className="num mt-1 text-2xl font-semibold">{valid ? formatAmount(mulDecimal(amount, price)) : "–"} <span className="text-base text-muted">{collSymbol}</span></p>
           <p className="mt-2 text-xs text-muted">100% of the deal value stays in escrow on Arc until you deliver, cancel, or default.</p>
         </div>
-        {steps && <TxSteps steps={steps} />}
+        {steps && <TxSteps steps={steps} onRetry={retry} busy={busy} />}
         {result ? (
           <div className="flex flex-col gap-2 text-sm">
             <p className="text-accent">Offer #{result.offerId} is live.</p>

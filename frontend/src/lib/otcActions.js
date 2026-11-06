@@ -76,6 +76,8 @@ export async function createOtcOrder(config, p, set) {
     set("create", { status: "done", link: arcExplorer.tx(createHash) });
 
     step = "publish";
+    // The order is already escrowed on Arc; publishing can be retried on its own.
+    const publish = async () => {
     set("publish", { status: "active" });
     const arkiv = await getArkivWallet(config);
     const { entityKey, txHash } = await arkiv.createEntity(
@@ -100,6 +102,13 @@ export async function createOtcOrder(config, p, set) {
     set("publish", { status: "done", link: arkivExplorer.tx(txHash) });
     await switchChain(config, { chainId: arcTestnet.id }).catch(() => {});
     return { entityKey, orderId: orderId.toString() };
+    };
+    try {
+      return await publish();
+    } catch (err) {
+      err.retry = publish;
+      throw err;
+    }
   } catch (err) {
     err.step = step;
     throw err;

@@ -12,8 +12,13 @@ const TONE = {
   skipped: "text-muted",
 };
 
-export function TxSteps({ steps }) {
+/**
+ * `onRetry`: when set, shows a button that reruns only the failed Arkiv step
+ * (used when the money already moved on Arc and just the listing/record failed).
+ */
+export function TxSteps({ steps, onRetry, busy = false }) {
   return (
+    <div className="flex flex-col gap-2">
     <ol className="flex flex-col gap-2" aria-label="Progress">
       {steps.map((s, i) => (
         <li key={s.id} className="flex flex-col gap-0.5 rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm">
@@ -33,6 +38,15 @@ export function TxSteps({ steps }) {
         </li>
       ))}
     </ol>
+    {onRetry && (
+      <div className="flex flex-col gap-1 rounded-lg border border-warn/40 bg-warn/10 px-3 py-2 text-xs">
+        <span>The Arc transaction went through; only the Arkiv step failed. Retry it without paying again:</span>
+        <button type="button" onClick={onRetry} disabled={busy} className="w-fit rounded-full bg-brand-gradient px-3 py-1.5 font-semibold text-accent-ink disabled:opacity-50">
+          {busy ? "Confirm in your wallet…" : "Retry the Arkiv step"}
+        </button>
+      </div>
+    )}
+    </div>
   );
 }
 

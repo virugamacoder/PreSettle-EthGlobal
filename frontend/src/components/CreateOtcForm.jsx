@@ -38,6 +38,7 @@ export function CreateOtcForm({ initialSide = "sell" }) {
   const [duration, setDuration] = useState(DURATIONS[1].seconds);
 
   const [steps, setSteps] = useState(null);
+  const [retry, setRetry] = useState(null);
   const [result, setResult] = useState(null);
   const [busy, setBusy] = useState(false);
 
@@ -55,6 +56,7 @@ export function CreateOtcForm({ initialSide = "sell" }) {
     if (!valid || busy) return;
     setBusy(true);
     setResult(null);
+    setRetry(null);
     let s = initSteps(CREATE_STEPS);
     const set = (id, patch) => setSteps((s = updateStep(s, id, patch)));
     setSteps(s);
@@ -78,6 +80,19 @@ export function CreateOtcForm({ initialSide = "sell" }) {
       setResult(created);
     } catch (err) {
       set(err.step ?? "approve", { status: "error", error: errorMessage(err) });
+      if (err.retry) {
+        setRetry(() => async () => {
+          setBusy(true);
+          try {
+            setResult(await err.retry());
+            setRetry(null);
+          } catch (e) {
+            set("publish", { status: "error", error: errorMessage(e) });
+          } finally {
+            setBusy(false);
+          }
+        });
+      }
     } finally {
       setBusy(false);
     }
@@ -174,7 +189,7 @@ export function CreateOtcForm({ initialSide = "sell" }) {
           </p>
         </div>
 
-        {steps && <TxSteps steps={steps} />}
+        {steps && <TxSteps steps={steps} onRetry={retry} busy={busy} />}
 
         {result ? (
           <div className="flex flex-col gap-2 text-sm">
