@@ -27,12 +27,17 @@ On startup the server logs which features are **on** and which are **off** becau
 | GET | `/v1/config` | — | Public settings: chain ID, USDC/EURC, contract addresses, ENS parent, feature flags |
 | GET | `/v1/status` | — | Latest block on Arc / Arkiv / Sepolia, platform account, keeper status |
 | GET | `/v1/orders` | — | OTC orders from Arkiv, verified on Arc. Query: `side`, `offerToken`, `wantToken`, `maker`, `partial`, `minPrice`, `maxPrice`, `limit` (≤100), `cursor` |
+| GET | `/v1/analytics` | — | Open orders, premarket offers, fills (24h/7d), 24h volume, trending tokens, active makers, most viewed (cached 60 s) |
+| POST | `/v1/views/:key` | — | Count a view of a listing (once per visitor per 10 min) |
+| GET | `/v1/views?keys=` | — | View counts for up to 100 listings |
+| GET | `/uploads/:file` | — | Uploaded token logos |
 | GET | `/v1/brokers/:label` | — | Broker license: status, expiry, address, `presettle.*` records, `verified` |
 | GET | `/v1/auth/nonce` | — | One-time nonce for Sign-In with Ethereum |
 | POST | `/v1/auth/verify` | — | `{message, signature}` → session token (admins are wallets in `ADMIN_WALLETS`) |
 | POST | `/v1/admin/brokers` | admin | `{label, address, days, maxFeeBps}`: issue a broker license |
 | POST | `/v1/admin/brokers/:label/revoke` | admin | Revoke (unregister) a license |
 | POST | `/v1/admin/brokers/:label/renew` | admin | `{days}`: extend a license |
+| POST | `/v1/admin/uploads` | admin | Raw PNG/JPEG/WebP/GIF body (≤512 KB) → `{url}` |
 
 Admin routes need `Authorization: Bearer <token>` from `/v1/auth/verify`.
 
@@ -48,6 +53,7 @@ See [.env.example](.env.example). In production the whole file is stored in the 
 | Broker issue/revoke | the above + `PLATFORM_PRIVATE_KEY` |
 | Admin sign-in | `AUTH_SECRET`, `ADMIN_WALLETS` |
 | Keeper | `KEEPER_ENABLED=true`, `PLATFORM_PRIVATE_KEY`, `OTC_CONTRACT` |
+| View counts, uploads | `DATA_DIR` (default `./data`; a Docker volume `data` on the server) |
 
 The contract functions the backend calls are listed in [docs/CONTRACT_INTERFACE.md](../docs/CONTRACT_INTERFACE.md). When the real ABI arrives, update [src/contracts/otc.js](src/contracts/otc.js).
 
