@@ -49,19 +49,37 @@ The frontend reads the new `orderId` from `OrderCreated` in the transaction rece
 
 ## PremarketMarket
 
+**Units:** `tokenAmount` is the pre-launch token amount with **18 decimals** (the real token doesn't exist before TGE). `pricePerToken` is in collateral-token units (USDC/EURC, 6 decimals) per 1 whole token. Collateral or payment = `tokenAmount * pricePerToken / 1e18` (the app rounds up). One `buy` is one buyer's purchase on one offer; `deliver` sends real tokens to all buyers of that offer.
+
 | Function | Used by | Purpose |
 |---|---|---|
-| `getOffer(uint256 offerId) view` | backend, frontend | Offer state for display and verification |
-| `getMarket(uint256 marketId) view` | frontend | Symbol, TGE time, delivery window, real token |
-| `createOffer(...) returns (uint256 offerId)` | frontend | Seller locks collateral |
+| `marketCount() view returns (uint256)` | frontend | Number of markets (ids 0..n-1) |
+| `getMarket(uint256 marketId) view returns (Market)` | frontend | Symbol, TGE time, delivery window, real token |
+| `getOffer(uint256 offerId) view returns (Offer)` | backend, frontend | Offer state for display and verification |
+| `purchases(uint256 offerId, address buyer) view returns (uint256)` | frontend | How much a buyer bought (18-dec) |
+| `createOffer(uint256 marketId, address collateralToken, uint256 tokenAmount, uint256 pricePerToken) returns (uint256 offerId)` | frontend | Seller locks 100% collateral |
 | `buy(uint256 offerId, uint256 tokenAmount)` | frontend | Buyer pays before TGE |
-| `deliver(uint256 offerId)` | frontend dashboard | Seller delivers real tokens in the TGE window |
-| `claimDefault(uint256 offerId)` | frontend, backend keeper | After the window, buyers get payment + seller collateral |
-| `cancelOffer(uint256 offerId)` / `reclaimUnsold(uint256 offerId)` | frontend dashboard | Seller cancels (nothing sold) / reclaims the unsold part |
-| `raiseDispute` / `resolveDispute` | frontend | Dispute flow (arbiter) |
-| admin: `createMarket`, `setRealToken` | frontend admin | Set up markets, set the token at TGE |
+| `deliver(uint256 offerId)` | frontend | Seller delivers real tokens in [TGE, TGE + deliveryWindow) |
+| `claimDefault(uint256 offerId)` | frontend, backend keeper | After the window: buyers get payment + pro-rata seller collateral |
+| `cancelOffer(uint256 offerId)` | frontend | Seller cancels when nothing is sold |
+| `reclaimUnsold(uint256 offerId)` | frontend | Seller reclaims collateral for the unsold part after TGE |
+| `createMarket(string symbol, uint64 tge, uint64 deliveryWindow) returns (uint256)` | frontend admin | New market |
+| `setRealToken(uint256 marketId, address token)` | frontend admin | Set the real token at TGE |
+| `raiseDispute` / `resolveDispute` | frontend | Dispute flow (arbiter), signatures TBD |
 
-**Events:** `OfferCreated(uint256 indexed offerId, ...)` (the frontend reads the id from it), plus events for buy, deliver, default, cancel and dispute.
+```solidity
+struct Market { string symbol; uint64 tge; uint64 deliveryWindow; address realToken; bool active; }
+struct Offer {
+  uint256 marketId; address seller; address collateralToken;
+  uint256 tokenAmount; uint256 pricePerToken; uint256 sellerCollateral;
+  uint256 sold; uint8 status;   // 0 Open, 1 Delivered, 2 Defaulted, 3 Cancelled, 4 Disputed, 5 Voided
+}
+event OfferCreated(uint256 indexed offerId, uint256 indexed marketId, address indexed seller,
+                   address collateralToken, uint256 tokenAmount, uint256 pricePerToken);
+event Purchased(uint256 indexed offerId, address indexed buyer, uint256 tokenAmount, uint256 paid);
+```
+
+The frontend reads the new `offerId` from `OfferCreated` in the receipt, so the event signature must match (or send the ABI). Frontend copy: [frontend/src/contracts/premarket.js](../frontend/src/contracts/premarket.js).
 
 ## BrokerRegistry (optional)
 
