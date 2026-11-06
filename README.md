@@ -46,8 +46,6 @@
 
 The team built an earlier, separate product called SettleX before this event. Its code is **not** included here; it was used only as a reference for the product idea and business rules. The new backend is deployed to the same AWS server the team already had.
 
-Early in the event, that product's deployment configuration (Dockerfile, docker-compose, nginx config) was copied in as a starting point (commit `93bb81e`). It has since been replaced by new files written here.
-
 ## AI usage
 
 - Planning and documentation were drafted with **Claude Code** (Anthropic).
