@@ -2,6 +2,7 @@ import express from "express";
 import helmet from "helmet";
 import cors from "cors";
 import { config, features } from "./config.js";
+import { chainStatus, platformAccount } from "./chains.js";
 
 export function createApp() {
   const app = express();
@@ -29,6 +30,15 @@ export function createApp() {
       arkiv: { adminAddress: config.arkiv.adminAddress ?? null },
       features,
     });
+  });
+
+  // Live connectivity to Arc, Arkiv and Sepolia.
+  app.get("/v1/status", async (req, res, next) => {
+    try {
+      res.json({ chains: await chainStatus(), platformAccount: platformAccount?.address ?? null });
+    } catch (err) {
+      next(err);
+    }
   });
 
   app.use((req, res) => {
