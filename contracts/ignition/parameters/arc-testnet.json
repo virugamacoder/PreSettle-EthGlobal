@@ -1,0 +1,12 @@
+{
+  "OTCMarket": {
+    "owner": "0xfEceA7b046b4DaFACE340c7A2fe924cf41b6d274",
+    "platformFeeBps": 50
+  },
+  "PremarketMarket": {
+    "owner": "0xfEceA7b046b4DaFACE340c7A2fe924cf41b6d274",
+    "platformFeeBps": 50,
+    "usdc": "0x3600000000000000000000000000000000000000",
+    "eurc": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a"
+  }
+}

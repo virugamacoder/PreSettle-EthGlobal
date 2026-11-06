@@ -1,444 +1,230 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
+const { loadFixture, time } = require("@nomicfoundation/hardhat-toolbox/network-helpers");
 
-describe("OpenMarket", function () {
+// Tests for OTCMarket (contracts/OpenMarket.sol).
+describe("OTCMarket", function () {
+  const PLATFORM_FEE_BPS = 50; // 0.5%
+  const E18 = 10n ** 18n;
 
-  let OpenMarket, StableCoin, TestToken, deployer, alice, bob, broker, client;
-  const tradeStatus = {
-    OPEN: 0,
-    CLOSED: 1,
-    CANCELLED: 2
-  };
-  const commission = 10;
-  const brokerFee = 2;
-  this.beforeAll(async function () {
+  async function deploy() {
+    const [owner, maker, taker, broker, stranger] = await ethers.getSigners();
+    const xyz = await ethers.deployContract("TestToken", ["XYZ Token", "XYZ"]);
+    const usdc = await ethers.deployContract("TestToken", ["Mock USDC", "USDC"]);
+    const market = await ethers.deployContract("OTCMarket", [owner.address, PLATFORM_FEE_BPS]);
 
-    const [_deployer, _alice, _bob, _broker, _client] = await ethers.getSigners();
+    for (const user of [maker, taker, stranger]) {
+      await xyz.mint(user.address, 1_000_000n * E18);
+      await usdc.mint(user.address, 1_000_000n * E18);
+      await xyz.connect(user).approve(market.target, ethers.MaxUint256);
+      await usdc.connect(user).approve(market.target, ethers.MaxUint256);
+    }
+    return { market, xyz, usdc, owner, maker, taker, broker, stranger };
+  }
 
-    const _stableCoin = await ethers.deployContract("TestToken", ["StableCoin", "STC"]);
-    const _testToken = await ethers.deployContract("TestToken", ["TestToken", "TTC"]);
-    
-    const _openMarket = await ethers.deployContract("OpenMarket");
+  // Maker sells `offerAmount` XYZ for `wantAmount` USDC in total.
+  async function params(xyz, usdc, overrides = {}) {
+    return {
+      offerToken: xyz.target,
+      offerAmount: 1000n * E18,
+      wantToken: usdc.target,
+      wantAmount: 500n * E18,
+      partialAllowed: true,
+      deadline: BigInt((await time.latest()) + 3600),
+      privateTaker: ethers.ZeroAddress,
+      broker: ethers.ZeroAddress,
+      brokerFeeBps: 0,
+      ...overrides,
+    };
+  }
 
-    deployer = _deployer;
-    alice = _alice;
-    bob = _bob;
+  async function withOrder(overrides = {}) {
+    const ctx = await loadFixture(deploy);
+    const p = await params(ctx.xyz, ctx.usdc, overrides);
+    await ctx.market.connect(ctx.maker).createOrder(p);
+    return { ...ctx, p, orderId: 1n };
+  }
 
-    StableCoin = _stableCoin;
-    TestToken = _testToken;
-    OpenMarket = _openMarket;
-    broker = _broker;
-    client = _client;
-  })
+  describe("createOrder", function () {
+    it("escrows the offer, emits OrderCreated with id 1 and stores the order", async function () {
+      const { market, xyz, usdc, maker } = await loadFixture(deploy);
+      const p = await params(xyz, usdc);
+      await expect(market.connect(maker).createOrder(p))
+        .to.emit(market, "OrderCreated")
+        .withArgs(1n, maker.address, xyz.target, usdc.target, p.offerAmount, p.wantAmount, p.deadline, ethers.ZeroAddress, ethers.ZeroAddress);
 
+      expect(await xyz.balanceOf(market.target)).to.equal(p.offerAmount);
+      const o = await market.getOrder(1n);
+      expect(o.maker).to.equal(maker.address);
+      expect(o.filledOffer).to.equal(0n);
+      expect(o.cancelled).to.equal(false);
+      expect(await market.nextOrderId()).to.equal(2n);
+    });
 
-  it("mint token to alice and bob", async function () {
+    it("rejects invalid input", async function () {
+      const { market, xyz, usdc, maker } = await loadFixture(deploy);
+      await expect(market.connect(maker).createOrder(await params(xyz, usdc, { wantToken: xyz.target })))
+        .to.be.revertedWithCustomError(market, "InvalidTokenPair");
+      await expect(market.connect(maker).createOrder(await params(xyz, usdc, { offerAmount: 0n })))
+        .to.be.revertedWithCustomError(market, "InvalidOrderAmounts");
+      await expect(market.connect(maker).createOrder(await params(xyz, usdc, { deadline: BigInt(await time.latest()) })))
+        .to.be.revertedWithCustomError(market, "InvalidDeadline");
+      await expect(market.connect(maker).createOrder(await params(xyz, usdc, { broker: maker.address, brokerFeeBps: 201 })))
+        .to.be.revertedWithCustomError(market, "BrokerFeeTooHigh");
+    });
 
-    await StableCoin.connect(deployer).mint(alice.address, ethers.parseEther("1000"));
-    await StableCoin.connect(deployer).mint(bob.address, ethers.parseEther("1000"));
-    await TestToken.connect(deployer).mint(alice.address, ethers.parseEther("1000"));
-    await TestToken.connect(deployer).mint(bob.address, ethers.parseEther("1000"));
+    it("forces the broker fee to 0 when there is no broker", async function () {
+      const { market } = await withOrder({ brokerFeeBps: 150 });
+      expect((await market.getOrder(1n)).brokerFeeBps).to.equal(0);
+    });
 
-    expect(await StableCoin.balanceOf(alice.address)).to.equal(ethers.parseEther("1000"));
-    expect(await StableCoin.balanceOf(bob.address)).to.equal(ethers.parseEther("1000"));
-    expect(await TestToken.balanceOf(alice.address)).to.equal(ethers.parseEther("1000"));
-    expect(await TestToken.balanceOf(bob.address)).to.equal(ethers.parseEther("1000"));
+    it("reverts getOrder for an unknown id", async function () {
+      const { market } = await loadFixture(deploy);
+      await expect(market.getOrder(42n)).to.be.revertedWithCustomError(market, "UnknownOrder");
+    });
   });
 
-  it("owner should set commission information", async function () {
-    await OpenMarket.connect(deployer).setCommissionToken(1, commission);
+  describe("fill", function () {
+    it("full fill: taker pays the price, gets the offer, fees and maker share are credited", async function () {
+      const { market, xyz, usdc, owner, maker, taker, p, orderId } = await withOrder();
+      const fee = (p.wantAmount * BigInt(PLATFORM_FEE_BPS)) / 10_000n;
 
-    const info = await OpenMarket.getCommissionInformation();
-    expect(Number(info[0])).to.equal(1);
-    expect(Number(info[1])).to.equal(commission);
-  })
+      await expect(market.connect(taker).fill(orderId, p.offerAmount))
+        .to.emit(market, "OrderFilled").withArgs(orderId, taker.address, p.offerAmount, p.wantAmount)
+        .and.to.emit(market, "FeeSplit").withArgs(orderId, fee, 0n, p.wantAmount - fee);
 
-  it("only owner should set commission information", async function () {
-    await expect(OpenMarket.connect(bob).setCommissionToken(1, 10)).to.reverted;
-  })
+      expect(await xyz.balanceOf(taker.address)).to.equal(1_000_000n * E18 + p.offerAmount);
+      expect(await market.balances(owner.address, usdc.target)).to.equal(fee);
+      expect(await market.balances(maker.address, usdc.target)).to.equal(p.wantAmount - fee);
+      expect((await market.getOrder(orderId)).filledOffer).to.equal(p.offerAmount);
+    });
 
-  it("commission percentage should be lower than 100", async function () {
-    await expect(OpenMarket.connect(deployer).setCommissionToken(1, 101)).to.revertedWith("Commission percentage must be lower than 100");
-  })
+    it("partial fills: each pays its price rounded up, and over-filling reverts", async function () {
+      const { market, usdc, taker } = await withOrder({ offerAmount: 3n, wantAmount: 10n });
+      const before = await usdc.balanceOf(taker.address);
+      await market.connect(taker).fill(1n, 1n); // ceil(10/3) = 4
+      expect(before - (await usdc.balanceOf(taker.address))).to.equal(4n);
+      await expect(market.connect(taker).fill(1n, 3n))
+        .to.be.revertedWithCustomError(market, "InvalidFillAmount").withArgs(3n, 2n);
+      await market.connect(taker).fill(1n, 2n); // ceil(20/3) = 7
+      expect(before - (await usdc.balanceOf(taker.address))).to.equal(11n);
+      await expect(market.connect(taker).fill(1n, 1n)).to.be.revertedWithCustomError(market, "OrderClosed");
+    });
 
-  it("alice should add trade for sell", async function () {
+    it("the taker can never pay less than the computed price", async function () {
+      const { market, usdc, taker, p } = await withOrder();
+      const half = p.offerAmount / 2n;
+      const before = await usdc.balanceOf(taker.address);
+      await market.connect(taker).fill(1n, half);
+      expect(before - (await usdc.balanceOf(taker.address))).to.equal(p.wantAmount / 2n);
+    });
 
-    await TestToken.connect(alice).approve(await OpenMarket.getAddress(), ethers.parseEther("10"));
+    it("an all-or-nothing order rejects partial fills", async function () {
+      const { market, taker, p } = await withOrder({ partialAllowed: false });
+      await expect(market.connect(taker).fill(1n, p.offerAmount / 2n))
+        .to.be.revertedWithCustomError(market, "PartialFillNotAllowed");
+      await expect(market.connect(taker).fill(1n, p.offerAmount)).to.emit(market, "OrderFilled");
+    });
 
-    const trade = {
-      OfferTokenAmount: ethers.parseEther("10"),
-      ReciveTokenAmount: ethers.parseEther("10"),
-      OfferToken: await TestToken.getAddress(),
-      WantToReceiveToken: await StableCoin.getAddress(),
-      trader: alice.address,
-      lotType: 0,
-      amtSold: 0,
-      status: tradeStatus.OPEN,
-      isBroker: false,
-      brokerFee: 2,
-      brokerAddress: alice.address,
-      timestamp: 123
-    }
+    it("rejects fills at or after the deadline", async function () {
+      const { market, taker, p } = await withOrder();
+      await time.increaseTo(p.deadline);
+      await expect(market.connect(taker).fill(1n, 1n)).to.be.revertedWithCustomError(market, "OrderDeadlineReached");
+    });
 
-    await OpenMarket.connect(alice).addTrade(trade);
-    const trades = await OpenMarket.connect(alice).getMyTrades();
+    it("enforces the private taker and stops the maker filling their own order", async function () {
+      const { market, maker, taker, stranger } = await withOrder();
+      await expect(market.connect(maker).fill(1n, 1n)).to.be.revertedWithCustomError(market, "MakerCannotFill");
 
-    expect(trades[0][0]).to.equal(trade.OfferTokenAmount);
-    expect(await OpenMarket.getLastAddedTradeIndex(alice.address)).to.equal(0);
-  })
+      const ctx = await withOrder({ privateTaker: taker.address });
+      await expect(ctx.market.connect(stranger).fill(1n, 1n)).to.be.revertedWithCustomError(ctx.market, "UnauthorizedTaker");
+      await expect(ctx.market.connect(taker).fill(1n, 1n)).to.emit(ctx.market, "OrderFilled");
+    });
 
-  it("bob should buy trade form alice", async function () {
-    const balanceOfAliceBefore = await StableCoin.balanceOf(alice.address);
-    await StableCoin.connect(bob).approve(await OpenMarket.getAddress(), ethers.parseEther("10"));
-    await OpenMarket.connect(bob).executeTrade(0, ethers.parseEther("10"), ethers.parseEther("10"));
-    const trades = await OpenMarket.connect(alice).getMyTrades();
+    it("splits platform fee, broker fee and maker share that add up exactly", async function () {
+      const { market, usdc, owner, maker, taker, broker, p } = await withOrder({ broker: (await ethers.getSigners())[3].address, brokerFeeBps: 150 });
+      await market.connect(taker).fill(1n, p.offerAmount);
+      const platform = await market.balances(owner.address, usdc.target);
+      const brokerCut = await market.balances(broker.address, usdc.target);
+      const makerCut = await market.balances(maker.address, usdc.target);
+      expect(platform).to.equal((p.wantAmount * 50n) / 10_000n);
+      expect(brokerCut).to.equal((p.wantAmount * 150n) / 10_000n);
+      expect(platform + brokerCut + makerCut).to.equal(p.wantAmount);
+    });
 
-    const balanceOfAliceAfter = await StableCoin.balanceOf(alice.address);
-
-    const balanceOfContract = await StableCoin.balanceOf(await OpenMarket.getAddress());
-    const commissionAmount = ethers.parseEther(((10 * commission) / 100).toString());
-    expect(balanceOfAliceAfter).to.equal((balanceOfAliceBefore + ethers.parseEther("10")) - balanceOfContract);
-    expect(balanceOfContract).to.equal(commissionAmount);
-    expect(Number(trades[0][7])).to.equal(1);
-  })
-
-  it("bob should add trade for buy", async function () {
-    await StableCoin.connect(bob).approve(await OpenMarket.getAddress(), ethers.parseEther("10"));
-    const trade = {
-      OfferTokenAmount: ethers.parseEther("10"),
-      ReciveTokenAmount: ethers.parseEther("10"),
-      OfferToken: await StableCoin.getAddress(),
-      WantToReceiveToken: await TestToken.getAddress(),
-      trader: bob.address,
-      lotType: 0,
-      amtSold: 0,
-      status: tradeStatus.OPEN,
-      isBroker: false,
-      brokerFee: 2,
-      brokerAddress: alice.address,
-      timestamp: 123
-    } 
-    await OpenMarket.connect(bob).addTrade(trade);
-    const trades = await OpenMarket.connect(bob).getMyTrades();
-    expect(trades[0][0]).to.equal(trade.OfferTokenAmount);
-    expect(await OpenMarket.getLastAddedTradeIndex(bob.address)).to.equal(1);
-  })
-
-  it("should get receivable amount", async function () {
-    const amount = await OpenMarket.connect(alice).getReceivableAmount(1);
-    expect(amount).to.equal(ethers.parseEther("9"));
-  })
-
-  it("alice should buy trade form bob", async function () {
-    const balanceOfBobBefore = await TestToken.balanceOf(bob.address);
-
-    await TestToken.connect(alice).approve(await OpenMarket.getAddress(), ethers.parseEther("10"));
-    await OpenMarket.connect(alice).executeTrade(1, ethers.parseEther("10"), ethers.parseEther("10"));
-    
-    const trades = await OpenMarket.connect(bob).getMyTrades();
-    const balanceOfbobAfter = await TestToken.balanceOf(bob.address);
-
-    const balanceOfContract = await TestToken.balanceOf(await OpenMarket.getAddress());
-
-    const commissionAmount = ethers.parseEther(((10 * commission) / 100).toString());
-    
-    expect(balanceOfbobAfter).to.equal((balanceOfBobBefore + ethers.parseEther("10")) - commissionAmount);
-    expect(balanceOfContract).to.equal(commissionAmount);
-    expect(Number(trades[0][7])).to.equal(1);
-  })
-
-  it("owner should cancel the trade", async function () {
-    await StableCoin.connect(bob).approve(await OpenMarket.getAddress(), ethers.parseEther("10"));
-    const trade = {
-      OfferTokenAmount: ethers.parseEther("10"),
-      ReciveTokenAmount: ethers.parseEther("10"),
-      OfferToken: await StableCoin.getAddress(),
-      WantToReceiveToken: await TestToken.getAddress(),
-      trader: bob.address,
-      lotType: 0,
-      amtSold: 0,
-      status: tradeStatus.OPEN,
-      isBroker: false,
-      brokerFee: 2,
-      brokerAddress: alice.address,
-      timestamp: 123
-    } 
-    await OpenMarket.connect(bob).addTrade(trade);
-
-    await OpenMarket.connect(bob).cancelTrade(2);
-    const trades = await OpenMarket.connect(bob).getMyTrades();
-
-    expect(Number(trades[1][7])).to.equal(2);
-  })
-
-  it("sholud not add trade ", async function () {
-    const trade = {
-      OfferTokenAmount: ethers.parseEther("0"),
-      ReciveTokenAmount: ethers.parseEther("10"),
-      OfferToken: await StableCoin.getAddress(),
-      WantToReceiveToken: await TestToken.getAddress(),
-      trader: bob.address,
-      lotType: 0,
-      amtSold: 0,
-      status: tradeStatus.OPEN,
-      isBroker: false,
-      brokerFee: 2,
-      brokerAddress: alice.address,
-      timestamp: 123
-    }
-
-    await expect(OpenMarket.connect(bob).addTrade(trade)).to.be.revertedWith("Offer token amount must be greater than 0");
-
-    trade.OfferTokenAmount = ethers.parseEther("10");
-    trade.ReciveTokenAmount = ethers.parseEther("0");
-    await expect(OpenMarket.connect(bob).addTrade(trade)).to.be.revertedWith("Receive token amount must be greater than 0");
-
-    trade.OfferToken = ethers.ZeroAddress;
-    trade.ReciveTokenAmount = ethers.parseEther("10");
-    await expect(OpenMarket.connect(bob).addTrade(trade)).to.be.revertedWith("Offer token address cannot be 0");
-
-    trade.OfferToken = await StableCoin.getAddress();
-    trade.WantToReceiveToken = ethers.ZeroAddress;
-    await expect(OpenMarket.connect(bob).addTrade(trade)).to.be.revertedWith("Receive token address cannot be 0");
-
-    trade.WantToReceiveToken = await TestToken.getAddress();
-    trade.OfferToken = await TestToken.getAddress();
-    await expect(OpenMarket.connect(bob).addTrade(trade)).to.be.revertedWith("Offer and receive token address cannot be same");
-
-    trade.OfferToken = await StableCoin.getAddress();
-    await expect(OpenMarket.connect(deployer).addTrade(trade)).to.be.revertedWith("Insufficient balance");
-
-    await expect(OpenMarket.connect(bob).addTrade(trade)).to.be.revertedWith("Insufficient Allowance");
-    
-  })
-
-  it("closed trade should not be cancel", async function () {
-    await expect(OpenMarket.connect(bob).cancelTrade(1)).to.be.revertedWith("Trade already closed");
-  })
-
-  it("trade should be canceled", async function () {
-    await StableCoin.connect(bob).approve(await OpenMarket.getAddress(), ethers.parseEther("10"));
-    const trade = {
-      OfferTokenAmount: ethers.parseEther("10"),
-      ReciveTokenAmount: ethers.parseEther("10"),
-      OfferToken: await StableCoin.getAddress(),
-      WantToReceiveToken: await TestToken.getAddress(),
-      trader: bob.address,
-      lotType: 0,
-      amtSold: 0,
-      status: tradeStatus.OPEN,
-      isBroker: false,
-      brokerFee: 2,
-      brokerAddress: alice.address,
-      timestamp: 123
-    } 
-    await OpenMarket.connect(bob).addTrade(trade);
-    const tradesIndex = await OpenMarket.connect(bob).getLastAddedTradeIndex(bob.address);
-
-    await expect(OpenMarket.connect(deployer).cancelTrade(tradesIndex)).to.be.revertedWith("Only trade owner can cancel the trade");
-
-    await OpenMarket.connect(bob).cancelTrade(tradesIndex);
-
-    await expect(OpenMarket.connect(bob).cancelTrade(tradesIndex)).to.be.revertedWith("Trade already cancelled");
-  })
-
-  it("should not execute trade because balance is not enough", async function () {
-    await StableCoin.connect(bob).approve(await OpenMarket.getAddress(), ethers.parseEther("10"));
-    const trade = {
-      OfferTokenAmount: ethers.parseEther("10"),
-      ReciveTokenAmount: ethers.parseEther("10"),
-      OfferToken: await StableCoin.getAddress(),
-      WantToReceiveToken: await TestToken.getAddress(),
-      trader: bob.address,
-      lotType: 0,
-      amtSold: 0,
-      status: tradeStatus.OPEN,
-      isBroker: false,
-      brokerFee: 2,
-      brokerAddress: alice.address,
-      timestamp: 123
-    } 
-    await OpenMarket.connect(bob).addTrade(trade);
-    const tradesIndex = await OpenMarket.connect(bob).getLastAddedTradeIndex(bob.address);
-    await expect(OpenMarket.connect(deployer).executeTrade(tradesIndex, ethers.parseEther("10"), ethers.parseEther("10"))).to.be.revertedWith("Insufficient balance");
-  })
-
-  it("should execute trade because trade is closed", async function () {
-    await expect(OpenMarket.connect(alice).executeTrade(1, ethers.parseEther("10"), ethers.parseEther("10"))).to.be.revertedWith("Trade already closed");
-  })
-
-  it("should execute trade because trade is closed", async function () {
-    await expect(OpenMarket.connect(alice).executeTrade(3, ethers.parseEther("10"), ethers.parseEther("10"))).to.be.revertedWith("Trade already cancelled");
-  })
-
-  it("should execute trade because insufficient allowance", async function () {
-    await expect(OpenMarket.connect(alice).executeTrade(4, ethers.parseEther("10"), ethers.parseEther("10"))).to.be.revertedWith("Insufficient allowance");
-  })
-
-  it("should withdraw collected fees", async function () {
-    const balanceBefore = await StableCoin.balanceOf(await OpenMarket.getAddress());
-    await OpenMarket.connect(deployer).withdrawCollectedFund(await StableCoin.getAddress());
-
-    const balanceAfter = await StableCoin.balanceOf(deployer.address);
-    expect(balanceAfter).to.equal(balanceBefore);
-  })
-
-  it("only owner can withdraw collected fees", async function () {
-    await expect(OpenMarket.connect(alice).withdrawCollectedFund(await StableCoin.getAddress())).to.be.reverted;
-  })
-
-  it("should revert with No fund to withdraw", async function () {
-    await expect(OpenMarket.connect(deployer).withdrawCollectedFund(await StableCoin.getAddress())).to.be.revertedWith("No fund to withdraw");
-  })
-
-  it("should revert with Token address cannot be 0", async function () {
-    await expect(OpenMarket.connect(deployer).withdrawCollectedFund(ethers.ZeroAddress)).to.be.revertedWith("Token address cannot be 0");
-  })
-
-  it("owner should set commission information", async function () {
-    await OpenMarket.connect(deployer).setCommissionToken(0, commission);
-
-    const info = await OpenMarket.getCommissionInformation();
-    expect(Number(info[0])).to.equal(0);
-    expect(Number(info[1])).to.equal(10);
-  })
-
-  it("should take commission from offer token", async function () {
-
-    await StableCoin.connect(bob).approve(await OpenMarket.getAddress(), ethers.parseEther("10"));
-    const trade = {
-      OfferTokenAmount: ethers.parseEther("10"),
-      ReciveTokenAmount: ethers.parseEther("10"),
-      OfferToken: await StableCoin.getAddress(),
-      WantToReceiveToken: await TestToken.getAddress(),
-      trader: bob.address,
-      lotType: 0,
-      amtSold: 0,
-      status: tradeStatus.OPEN,
-      isBroker: false,
-      brokerFee: 2,
-      brokerAddress: alice.address,
-      timestamp: 123
-    } 
-    await OpenMarket.connect(bob).addTrade(trade);
-    const tradeIndex = await OpenMarket.connect(bob).getLastAddedTradeIndex(bob.address);
-    const balanceOfAliceBeforeInStable = await StableCoin.balanceOf(alice.address);
-
-    expect(await OpenMarket.connect(alice).getReceivableAmount(tradeIndex)).to.equal(ethers.parseEther("9"));
-
-    await TestToken.connect(alice).approve(await OpenMarket.getAddress(), ethers.parseEther("10"));
-    await OpenMarket.connect(alice).executeTrade(tradeIndex, ethers.parseEther("10"), ethers.parseEther("10"));
-    
-    const trades = await OpenMarket.connect(bob).getMyTrades();
-
-    const balanceOfContractInStable = await StableCoin.balanceOf(await OpenMarket.getAddress());
-    
-    const balanceOfAliceAfterInStable = await StableCoin.balanceOf(alice.address);
-    
-    expect(balanceOfAliceAfterInStable).to.equal(ethers.parseEther("1028"));
-    expect(balanceOfContractInStable).to.equal(ethers.parseEther("1"));
-
-
-    const commissionAmount = ethers.parseEther(((10 * commission) / 100).toString());
-    
-    expect(balanceOfAliceAfterInStable).to.equal((balanceOfAliceBeforeInStable + ethers.parseEther("10")) - commissionAmount);
-    expect(balanceOfContractInStable).to.equal(commissionAmount);
-
-    expect(Number(trades[trades.length - 1][7])).to.equal(1);
-  })
-
-  // test for partial trade
-  it("should add and execute partial trade", async function () {
-    await StableCoin.connect(bob).approve(await OpenMarket.getAddress(), ethers.parseEther("10"));
-    const balanceOfContractInStableBefore = await StableCoin.balanceOf(await OpenMarket.getAddress());
-
-    const trade = {
-      OfferTokenAmount: ethers.parseEther("10"),
-      ReciveTokenAmount: ethers.parseEther("10"),
-      OfferToken: await StableCoin.getAddress(),
-      WantToReceiveToken: await TestToken.getAddress(),
-      listingPrice: ethers.parseEther("1"),
-      trader: bob.address,
-      lotType: 1,
-      amtSold: 0,
-      status: tradeStatus.OPEN,
-      isBroker: false,
-      brokerFee: 2,
-      brokerAddress: alice.address,
-      timestamp: 123
-    } 
-    await OpenMarket.connect(bob).addTrade(trade);
-    const tradeIndex = await OpenMarket.connect(bob).getLastAddedTradeIndex(bob.address);
-    const balanceOfAliceBeforeInStable = await StableCoin.balanceOf(alice.address);
-
-
-    await TestToken.connect(alice).approve(await OpenMarket.getAddress(), ethers.parseEther("5"));
-    await OpenMarket.connect(alice).executeTrade(tradeIndex, ethers.parseEther("5"), ethers.parseEther("5"));
-
-    const trades = await OpenMarket.connect(bob).getMyTrades();
-
-    const balanceOfContractInStableAfter = await StableCoin.balanceOf(await OpenMarket.getAddress());
-    const balanceOfAliceAfterInStable = await StableCoin.balanceOf(alice.address);
-
-    const commissionAmount = ethers.parseEther(((5 * commission) / 100).toString());
-    
-    expect(balanceOfAliceAfterInStable).to.equal((balanceOfAliceBeforeInStable + ethers.parseEther("5")) - commissionAmount);
-    expect(balanceOfContractInStableAfter).to.equal(balanceOfContractInStableBefore + ethers.parseEther("5") + commissionAmount);
-    expect(Number(trades[trades.length - 1][7])).to.equal(0);
+    it("uses the platform fee locked in when the order was created", async function () {
+      const { market, usdc, owner, taker, p } = await withOrder();
+      await market.connect(owner).setPlatformFee(100);
+      await market.connect(taker).fill(1n, p.offerAmount);
+      expect(await market.balances(owner.address, usdc.target)).to.equal((p.wantAmount * 50n) / 10_000n);
+    });
   });
 
-  // test for broker
-  it("alice should add trade for sell", async function () {
+  describe("cancel and expire", function () {
+    it("cancel credits the unfilled amount to the maker, only once, only by the maker", async function () {
+      const { market, xyz, maker, taker, stranger, p } = await withOrder();
+      await market.connect(taker).fill(1n, p.offerAmount / 4n);
+      await expect(market.connect(stranger).cancel(1n)).to.be.revertedWithCustomError(market, "NotMaker");
+      await expect(market.connect(maker).cancel(1n)).to.emit(market, "OrderCancelled").withArgs(1n);
+      expect(await market.balances(maker.address, xyz.target)).to.equal((p.offerAmount * 3n) / 4n);
+      expect((await market.getOrder(1n)).cancelled).to.equal(true);
+      await expect(market.connect(maker).cancel(1n)).to.be.revertedWithCustomError(market, "OrderClosed");
+      await expect(market.connect(taker).fill(1n, 1n)).to.be.revertedWithCustomError(market, "OrderClosed");
+    });
 
-    await TestToken.connect(alice).approve(await OpenMarket.getAddress(), ethers.parseEther("10"));
+    it("expire: anyone, only after the deadline, sets cancelled and refunds the maker", async function () {
+      const { market, xyz, maker, stranger, p } = await withOrder();
+      await expect(market.connect(stranger).expire(1n)).to.be.revertedWithCustomError(market, "OrderNotExpired");
+      await time.increaseTo(p.deadline);
+      await expect(market.connect(stranger).expire(1n)).to.emit(market, "OrderExpired").withArgs(1n);
+      expect((await market.getOrder(1n)).cancelled).to.equal(true);
+      expect(await market.balances(maker.address, xyz.target)).to.equal(p.offerAmount);
+      expect(await market.balances(stranger.address, xyz.target)).to.equal(0n);
+      await expect(market.connect(stranger).expire(1n)).to.be.revertedWithCustomError(market, "OrderClosed");
+    });
 
-    // transfer funds to broker and allow broker to spend funds
-    await TestToken.connect(alice).transfer(client.address, ethers.parseEther("10"));
-    await TestToken.connect(client).approve(await OpenMarket.getAddress(), ethers.parseEther("10"));
+    it("a fully filled order cannot be expired", async function () {
+      const { market, taker, stranger, p } = await withOrder();
+      await market.connect(taker).fill(1n, p.offerAmount);
+      await time.increaseTo(p.deadline);
+      await expect(market.connect(stranger).expire(1n)).to.be.revertedWithCustomError(market, "OrderClosed");
+    });
+  });
 
-    const trade = {
-      OfferTokenAmount: ethers.parseEther("10"),
-      ReciveTokenAmount: ethers.parseEther("10"),
-      OfferToken: await TestToken.getAddress(),
-      WantToReceiveToken: await StableCoin.getAddress(),
-      trader: client.address,
-      lotType: 0,
-      amtSold: 0,
-      status: tradeStatus.OPEN,
-      isBroker: true,
-      brokerFee: brokerFee,
-      brokerAddress: broker.address,
-      timestamp: 123
-    }
+  describe("withdraw and admin", function () {
+    it("withdraw pays the whole credit once", async function () {
+      const { market, xyz, maker } = await withOrder();
+      await market.connect(maker).cancel(1n);
+      const before = await xyz.balanceOf(maker.address);
+      await expect(market.connect(maker).withdraw(xyz.target)).to.emit(market, "Withdrawn");
+      expect((await xyz.balanceOf(maker.address)) - before).to.equal(1000n * E18);
+      expect(await market.balances(maker.address, xyz.target)).to.equal(0n);
+      await expect(market.connect(maker).withdraw(xyz.target)).to.be.revertedWithCustomError(market, "NothingToWithdraw");
+    });
 
-    await OpenMarket.connect(client).addTrade(trade);
-    const trades = await OpenMarket.connect(client).getMyTrades();
+    it("the contract keeps nothing after every party withdraws", async function () {
+      const { market, xyz, usdc, owner, maker, taker, p } = await withOrder();
+      await market.connect(taker).fill(1n, p.offerAmount / 2n);
+      await market.connect(maker).cancel(1n);
+      await market.connect(maker).withdraw(xyz.target);
+      await market.connect(maker).withdraw(usdc.target);
+      await market.connect(owner).withdraw(usdc.target);
+      expect(await xyz.balanceOf(market.target)).to.equal(0n);
+      expect(await usdc.balanceOf(market.target)).to.equal(0n);
+    });
 
-    expect(trades[0][0]).to.equal(trade.OfferTokenAmount);
-    expect(await OpenMarket.getLastAddedTradeIndex(client.address)).to.equal(0);
-  })
+    it("platform fee: owner only, capped at 100 bps", async function () {
+      const { market, owner, stranger } = await loadFixture(deploy);
+      await expect(market.connect(stranger).setPlatformFee(10)).to.be.revertedWithCustomError(market, "OwnableUnauthorizedAccount");
+      await expect(market.connect(owner).setPlatformFee(101)).to.be.revertedWithCustomError(market, "PlatformFeeTooHigh");
+      await expect(market.connect(owner).setPlatformFee(100)).to.emit(market, "PlatformFeeUpdated").withArgs(50, 100);
+      await expect(ethers.deployContract("OTCMarket", [owner.address, 101])).to.be.reverted;
+    });
 
-  it("bob should buy trade form alice", async function () {
-    const prevBalClient = await StableCoin.balanceOf(client.address);
-    const prevBalBroker = await StableCoin.balanceOf(broker.address);
-    const prevBalContract = await StableCoin.balanceOf(await OpenMarket.getAddress());
-
-    await StableCoin.connect(bob).approve(await OpenMarket.getAddress(), ethers.parseEther("10"));
-    await OpenMarket.connect(bob).executeTrade(0, ethers.parseEther("10"), ethers.parseEther("10"));
-    const trades = await OpenMarket.connect(client).getMyTrades();
-    console.log(trades);
-
-    const afterBalClient = await StableCoin.balanceOf(client.address);
-    const afterBalBroker = await StableCoin.balanceOf(broker.address);
-    const afterBalContract = await StableCoin.balanceOf(await OpenMarket.getAddress());
-
-    const brokerCommission = ethers.parseEther(((10 * brokerFee) / 100).toString());
-    const otcCommission = ethers.parseEther(((10 * commission) / 100).toString());
-    const totalCommission = brokerCommission + otcCommission;
-
-    // check balance of alice, contract and broker
-    expect(afterBalClient).to.equal((prevBalClient + ethers.parseEther("10")) - totalCommission);
-    expect(afterBalBroker).to.equal(prevBalBroker + brokerCommission);
-    expect(afterBalContract).to.equal(prevBalContract + otcCommission);
-  })
+    it("rejects native value and ownership renunciation", async function () {
+      const { market, owner } = await loadFixture(deploy);
+      await expect(owner.sendTransaction({ to: market.target, value: 1n })).to.be.revertedWithCustomError(market, "NativeValueNotAccepted");
+      await expect(market.connect(owner).renounceOwnership()).to.be.revertedWithCustomError(market, "OwnershipRenunciationDisabled");
+    });
+  });
 });

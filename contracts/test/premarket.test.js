@@ -1,529 +1,230 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
+const { loadFixture, time } = require("@nomicfoundation/hardhat-toolbox/network-helpers");
 
-function tokens(n) {
-    return ethers.parseEther(n.toString());
-}
+// Tests for PremarketMarket (contracts/PreMarket.sol).
+describe("PremarketMarket", function () {
+  const PLATFORM_FEE_BPS = 50; // 0.5%
+  const E18 = 10n ** 18n;
+  const WINDOW = 300; // delivery window, seconds
+  const STATUS = { Open: 0, Delivered: 1, Defaulted: 2, Cancelled: 3, Voided: 5 };
 
-describe("PreMarket", async ()=> {
-    let preMarket;
-    let deployer, addr1, addr2, addr3;
-    let offerToken, stableToken, collateralToken;
-    let offer, offer1, offerId, offerId1;
+  async function deploy() {
+    const [owner, seller, alice, bob, stranger] = await ethers.getSigners();
+    const usdc = await ethers.deployContract("TestToken", ["Mock USDC", "USDC"]);
+    const eurc = await ethers.deployContract("TestToken", ["Mock EURC", "EURC"]);
+    const real = await ethers.deployContract("TestToken", ["XYZ Token", "XYZ"]);
+    const other = await ethers.deployContract("TestToken", ["Other", "OTH"]);
+    const market = await ethers.deployContract("PremarketMarket", [owner.address, PLATFORM_FEE_BPS, usdc.target, eurc.target]);
 
-    before(async () => {
-        [deployer, addr1, addr2, addr3] = await ethers.getSigners();
+    for (const user of [seller, alice, bob, stranger]) {
+      for (const t of [usdc, eurc, other]) {
+        await t.mint(user.address, 1_000_000n * E18);
+        await t.connect(user).approve(market.target, ethers.MaxUint256);
+      }
+    }
+    await real.mint(seller.address, 1_000_000n * E18);
+    await real.connect(seller).approve(market.target, ethers.MaxUint256);
 
-        offerToken = await ethers.deployContract("TestToken", ["Offer Token", "OFFER"]);
-        console.log("Offer Token deployed to:", offerToken.target);
-        stableToken = await ethers.deployContract("TestToken", ["Receive Token", "RECEIVE"]);
-        console.log("Receive Token deployed to:", stableToken.target);
-        collateralToken = await ethers.deployContract("TestToken", ["Collateral Token", "COLLATERAL"]);
-        console.log("Collateral Token deployed to:", collateralToken.target);
+    const tge = (await time.latest()) + 3600;
+    await market.connect(owner).createMarket("XYZ", tge, WINDOW);
+    return { market, usdc, eurc, real, other, owner, seller, alice, bob, stranger, tge };
+  }
 
-        preMarket = await ethers.deployContract("PreMarket");
+  // Seller offers 100 XYZ at 2 USDC each (collateral 200 USDC).
+  const TOKENS = 100n * E18;
+  const PRICE = 2n * E18;
+  const collateralFor = (amount) => (amount * PRICE + E18 - 1n) / E18;
 
-        // mint offer and receive tokens to the users
-        offerToken.connect(deployer).mint(addr1.address, tokens(1000));
-        offerToken.connect(deployer).mint(addr2.address, tokens(1000));
-        stableToken.connect(deployer).mint(addr1.address, tokens(1000));
-        stableToken.connect(deployer).mint(addr2.address, tokens(1000));
-        collateralToken.connect(deployer).mint(addr1.address, tokens(1000));
-        collateralToken.connect(deployer).mint(addr2.address, tokens(1000));
+  async function withOffer() {
+    const ctx = await loadFixture(deploy);
+    await ctx.market.connect(ctx.seller).createOffer(0n, ctx.usdc.target, TOKENS, PRICE);
+    return { ...ctx, offerId: 1n };
+  }
 
-        offer = {
-            offerType: 1,
-            OfferToken: offerToken.target,
-            OfferTokenAmount: tokens(100),
-            StableToken: stableToken.target,
-            StableTokenAmount: tokens(200),
-            CollateralToken: collateralToken.target,
-            CollateralTokenAmount: tokens(100),
-            creator: addr1.address,
-            amtSold: 0
-        }
+  // Alice buys 30, Bob buys 50 before TGE.
+  async function withSales() {
+    const ctx = await withOffer();
+    await ctx.market.connect(ctx.alice).buy(1n, 30n * E18);
+    await ctx.market.connect(ctx.bob).buy(1n, 50n * E18);
+    return ctx;
+  }
 
-        offer1 = {
-            offerType: 0,
-            OfferToken: offerToken.target,
-            OfferTokenAmount: tokens(100),
-            StableToken: stableToken.target,
-            StableTokenAmount: tokens(200),
-            CollateralToken: collateralToken.target,
-            CollateralTokenAmount: tokens(100),
-            creator: addr1.address,
-            amtSold: 0
-        }
-
-        await preMarket.addToken(offerToken.target, Math.ceil(Date.now()/1000) + 1000, Math.ceil(Date.now()/1000) + 50000);
+  describe("markets", function () {
+    it("owner creates markets with a future TGE; views return them", async function () {
+      const { market, owner, stranger, tge } = await loadFixture(deploy);
+      expect(await market.marketCount()).to.equal(1n);
+      const m = await market.getMarket(0n);
+      expect(m.symbol).to.equal("XYZ");
+      expect(m.tge).to.equal(BigInt(tge));
+      expect(m.realToken).to.equal(ethers.ZeroAddress);
+      expect(m.active).to.equal(true);
+      await expect(market.connect(stranger).createMarket("ABC", tge, WINDOW)).to.be.revertedWithCustomError(market, "OwnableUnauthorizedAccount");
+      await expect(market.connect(owner).createMarket("ABC", await time.latest(), WINDOW)).to.be.revertedWithCustomError(market, "InvalidTge");
+      await expect(market.getMarket(9n)).to.be.revertedWithCustomError(market, "UnknownMarket");
     });
 
-    it("should allow owner to set the commission", async () => {
-        await preMarket.connect(deployer).setCommission(25, 10);
-        let commissions = await preMarket.getCommissionPercentage();
-        expect(commissions[0]).to.equal(25);
-        expect(commissions[1]).to.equal(10);
+    it("TGE can only move before the first offer", async function () {
+      const { market, owner, tge } = await withOffer();
+      await expect(market.connect(owner).setTge(0n, tge + 100)).to.be.revertedWithCustomError(market, "MarketHasOffers");
     });
 
-    it("should not allow other users to set the commission", async () => {
-        await expect(preMarket.connect(addr1).setCommission(25, 100)).to.be.reverted
+    it("the real token can only be set during the delivery window", async function () {
+      const { market, owner, real, usdc, tge } = await loadFixture(deploy);
+      await expect(market.connect(owner).setRealToken(0n, real.target)).to.be.revertedWithCustomError(market, "TgeNotReached");
+      await time.increaseTo(tge);
+      await expect(market.connect(owner).setRealToken(0n, usdc.target)).to.be.revertedWithCustomError(market, "InvalidRealToken");
+      await expect(market.connect(owner).setRealToken(0n, real.target)).to.emit(market, "RealTokenSet").withArgs(0n, real.target);
+      await expect(market.connect(owner).setRealToken(0n, real.target)).to.be.revertedWithCustomError(market, "RealTokenAlreadySet");
+    });
+  });
+
+  describe("offers and buying", function () {
+    it("createOffer locks 100% collateral, computed on-chain", async function () {
+      const { market, usdc, seller } = await loadFixture(deploy);
+      await expect(market.connect(seller).createOffer(0n, usdc.target, TOKENS, PRICE))
+        .to.emit(market, "OfferCreated").withArgs(1n, 0n, seller.address, usdc.target, TOKENS, PRICE);
+      const o = await market.getOffer(1n);
+      expect(o.sellerCollateral).to.equal(collateralFor(TOKENS));
+      expect(o.status).to.equal(STATUS.Open);
+      expect(await usdc.balanceOf(market.target)).to.equal(collateralFor(TOKENS));
     });
 
-    it("should allow users to create an offer", async () => {
-        await offerToken.connect(addr1).approve(preMarket.target, tokens(100));
-        await collateralToken.connect(addr1).approve(preMarket.target, tokens(100));
-
-        let prevBalCollateral = await collateralToken.balanceOf(addr1.address);
-        console.log("prevBalCollateral", prevBalCollateral.toString());
-
-        let prevBalContract = await collateralToken.balanceOf(preMarket.target);
-        console.log("prevBalContract", prevBalContract.toString());
-
-        let tx = await preMarket.connect(addr1).createOffer(offer);
-        let receipt = await tx.wait();
-
-        await expect(receipt).to.emit(preMarket, "OfferCreated").withArgs(0, addr1.address);
-        offerId = 0;
-
-        let afterBalCollateral = await collateralToken.balanceOf(addr1.address);
-        console.log("afterBalCollateral", afterBalCollateral.toString());
-
-        let afterBalContract = await collateralToken.balanceOf(preMarket.target);
-        console.log("afterBalContract", afterBalContract.toString());
-
-        expect(afterBalCollateral).to.equal(prevBalCollateral - offer.CollateralTokenAmount);
-        expect(afterBalContract).to.equal(prevBalContract + offer.CollateralTokenAmount);
-
-        let offerDetail = await preMarket.getOfferDetails(offerId);
-        expect(offerDetail.OfferTokenAmount).to.equal(offer.OfferTokenAmount);
-        expect(offerDetail.OfferToken).to.equal(offer.OfferToken);
-        expect(offerDetail.creator).to.equal(offer.creator);
+    it("only USDC/EURC collateral, non-zero amounts", async function () {
+      const { market, other, eurc, seller } = await loadFixture(deploy);
+      await expect(market.connect(seller).createOffer(0n, other.target, TOKENS, PRICE)).to.be.revertedWithCustomError(market, "InvalidCollateralToken");
+      await expect(market.connect(seller).createOffer(0n, eurc.target, 0n, PRICE)).to.be.revertedWithCustomError(market, "InvalidTokenAmount");
+      await expect(market.connect(seller).createOffer(0n, eurc.target, TOKENS, 0n)).to.be.revertedWithCustomError(market, "InvalidPrice");
+      await expect(market.connect(seller).createOffer(0n, eurc.target, TOKENS, PRICE)).to.emit(market, "OfferCreated");
     });
 
-    it("should allow deployer to change timestamps", async () => {
-        await preMarket.connect(deployer).editTimestamps(offer.OfferToken, Math.ceil(Date.now()/1000) + 1000, Math.ceil(Date.now()/1000) + 50000);
-
-        // check if the timestamps are changed
-        let tokenDetails = await preMarket.getTokenDetails(offerToken.target);
-        expect(tokenDetails.tgeStart).to.equal(Math.ceil(Date.now()/1000) + 1000);
-        expect(tokenDetails.tgeEnd).to.equal(Math.ceil(Date.now()/1000) + 50000);
+    it("buy pulls the computed payment and records the purchase", async function () {
+      const { market, usdc, alice } = await withOffer();
+      const before = await usdc.balanceOf(alice.address);
+      await expect(market.connect(alice).buy(1n, 30n * E18))
+        .to.emit(market, "Purchased").withArgs(1n, alice.address, 30n * E18, collateralFor(30n * E18));
+      expect(before - (await usdc.balanceOf(alice.address))).to.equal(collateralFor(30n * E18));
+      expect(await market.purchases(1n, alice.address)).to.equal(30n * E18);
+      expect((await market.getOffer(1n)).sold).to.equal(30n * E18);
+      expect(await market.buyerCount(1n)).to.equal(1n);
+      expect(await market.buyerAt(1n, 0n)).to.equal(alice.address);
     });
 
-    it("should not allow other users to change timestamps", async () => {
-        await expect(preMarket.connect(addr2).editTimestamps(offer.OfferToken, Math.ceil(Date.now()/1000) + 1000, Math.ceil(Date.now()/1000) + 50000)).to.be.reverted;
+    it("rejects the seller, overselling, dust first purchases and buys after TGE", async function () {
+      const { market, seller, alice, bob, tge } = await withOffer();
+      await expect(market.connect(seller).buy(1n, E18)).to.be.revertedWithCustomError(market, "SellerCannotBuy");
+      await expect(market.connect(alice).buy(1n, TOKENS + 1n)).to.be.revertedWithCustomError(market, "Oversold");
+      // a new buyer must take at least 1/50 of the offer (2 XYZ here)
+      await expect(market.connect(alice).buy(1n, E18)).to.be.revertedWithCustomError(market, "BelowMinimumPurchase");
+      await time.increaseTo(tge);
+      await expect(market.connect(bob).buy(1n, 10n * E18)).to.be.revertedWithCustomError(market, "TgeReached");
+    });
+  });
+
+  describe("settlement", function () {
+    it("deliver in the window: buyers and seller are credited, platform fee taken, only once", async function () {
+      const { market, usdc, real, owner, seller, alice, bob, tge } = await withSales();
+      await time.increaseTo(tge);
+      await market.connect(owner).setRealToken(0n, real.target);
+
+      const sold = 80n * E18;
+      const totalPaid = collateralFor(30n * E18) + collateralFor(50n * E18);
+      const fee = (totalPaid * BigInt(PLATFORM_FEE_BPS)) / 10_000n;
+      await expect(market.connect(seller).deliver(1n)).to.emit(market, "Delivered").withArgs(1n, sold, fee);
+
+      expect(await market.balances(alice.address, real.target)).to.equal(30n * E18);
+      expect(await market.balances(bob.address, real.target)).to.equal(50n * E18);
+      expect(await market.balances(owner.address, usdc.target)).to.equal(fee);
+      expect(await market.balances(seller.address, usdc.target)).to.equal(totalPaid - fee + collateralFor(sold));
+      expect((await market.getOffer(1n)).status).to.equal(STATUS.Delivered);
+      await expect(market.connect(seller).deliver(1n)).to.be.revertedWithCustomError(market, "OfferNotOpen");
     });
 
-    it("should allow user to contribute to an offer", async () => {
-        let prevBalStable = await stableToken.balanceOf(addr2.address);
-        console.log("prevBalStable", prevBalStable.toString());
-
-        let prevBalDeployer = await stableToken.balanceOf(deployer.address);
-        console.log("prevBalDeployer", prevBalDeployer.toString());
-
-        await stableToken.connect(addr2).approve(preMarket.target, tokens(200));
-
-        let tx = await preMarket.connect(addr2).contributeToOffer(offerId, tokens(20), tokens(10));
-        let receipt = await tx.wait();
-
-        await expect(receipt).to.emit(preMarket, "OfferContribution").withArgs(offerId, addr2.address, tokens(20));
-
-        let afterBalStable = await stableToken.balanceOf(addr2.address);
-        console.log("afterBalStable", afterBalStable.toString());
-
-        let afterBalDeployer = await stableToken.balanceOf(deployer.address);
-        console.log("afterBalDeployer", afterBalDeployer.toString());
-
-        let commissions = await preMarket.getCommissionPercentage();
-        let commissionAmount = (tokens(20).toString() * commissions[0].toString() / commissions[1].toString())/100;
-        commissionAmount = commissionAmount.toString();
-
-        let offerDetail = await preMarket.getOfferDetails(offerId);
-        expect(offerDetail.amtSold).to.equal(tokens(10));
-        expect(afterBalStable).to.equal(prevBalStable - tokens(20));
-        expect(afterBalDeployer).to.equal(prevBalDeployer + BigInt(commissionAmount));
+    it("deliver is rejected before TGE, without a real token, and after the window", async function () {
+      const { market, real, owner, seller, tge } = await withSales();
+      await expect(market.connect(seller).deliver(1n)).to.be.revertedWithCustomError(market, "TgeNotReached");
+      await time.increaseTo(tge);
+      await expect(market.connect(seller).deliver(1n)).to.be.revertedWithCustomError(market, "RealTokenNotSet");
+      await market.connect(owner).setRealToken(0n, real.target);
+      await time.increaseTo(tge + WINDOW);
+      await expect(market.connect(seller).deliver(1n)).to.be.revertedWithCustomError(market, "DeliveryWindowClosed");
     });
 
-    it("should not allow users to contribute to an offer if TGE already achieved", async () => {
-        const currentTimeInSeconds = Math.ceil(Date.now() / 1000);
-        const futureStartTimestamp = currentTimeInSeconds - 10000000; 
-        const endTimestamp = futureStartTimestamp + 100000000; 
+    it("claimDefault after the window: buyers get their payment plus the sold collateral, once", async function () {
+      const { market, usdc, real, owner, alice, bob, stranger, tge } = await withSales();
+      await time.increaseTo(tge);
+      await market.connect(owner).setRealToken(0n, real.target);
+      await expect(market.connect(stranger).claimDefault(1n)).to.be.revertedWithCustomError(market, "DeliveryWindowNotClosed");
+      await time.increaseTo(tge + WINDOW);
+      await expect(market.connect(stranger).claimDefault(1n)).to.emit(market, "Defaulted");
 
-        await preMarket.connect(deployer).editTimestamps(offer.OfferToken, futureStartTimestamp, endTimestamp);
-    
-        await expect(preMarket.connect(addr2).contributeToOffer(offerId, tokens(20), tokens(10))).to.be.revertedWith("TGE already passed, you can't contribute now");
-
-        await preMarket.connect(deployer).editTimestamps(offer.OfferToken, Math.ceil(Date.now()/1000) + 1000, Math.ceil(Date.now()/1000) + 50000);
-    });
-    
-    it("should not allow users to contribute to an offer with invalid amounts", async () => {
-        await expect(preMarket.connect(addr2).contributeToOffer(offerId, 0, tokens(10))).to.be.revertedWith("Contribution amount must be greater than zero");
-    });
-
-    it("should not allow users to contribute to an offer with more than available tokens", async () => {
-        let offerDetail = await preMarket.getOfferDetails(offerId);
-        console.log(offerDetail)
-
-        await expect(preMarket.connect(addr2).contributeToOffer(offerId, tokens(20), tokens(1000))).to.be.revertedWith("Not enough tokens left in offer");
-    });
-    
-    it("should not allow to distribute tokens if TGE hasn't reached", async () => {
-        await expect(preMarket.connect(addr1).distributeTokensSell(offerId)).to.be.revertedWith("TGE not reached yet");
+      const soldCollateral = collateralFor(80n * E18);
+      const a = await market.balances(alice.address, usdc.target);
+      const b = await market.balances(bob.address, usdc.target);
+      expect(a + b).to.equal(collateralFor(30n * E18) + collateralFor(50n * E18) + soldCollateral);
+      expect(a).to.equal(collateralFor(30n * E18) + (soldCollateral * 30n) / 80n);
+      expect((await market.getOffer(1n)).status).to.equal(STATUS.Defaulted);
+      await expect(market.connect(stranger).claimDefault(1n)).to.be.revertedWithCustomError(market, "OfferNotOpen");
     });
 
-    it("should not allow other users to distribute tokens", async () => {
-        await preMarket.connect(deployer).editTimestamps(offer.OfferToken, Math.ceil(Date.now()/1000) - 700000, Math.ceil(Date.now()/1000) + 600000);
-
-        await expect(preMarket.connect(addr2).distributeTokensSell(offerId)).to.be.revertedWith("Only the offer creator can distribute tokens");
+    it("no real token by the end of the window voids the offer: everyone is refunded", async function () {
+      const { market, usdc, seller, alice, stranger, tge } = await withSales();
+      await time.increaseTo(tge + WINDOW);
+      await expect(market.connect(stranger).claimDefault(1n)).to.emit(market, "OfferVoided");
+      expect((await market.getOffer(1n)).status).to.equal(STATUS.Voided);
+      expect(await market.balances(alice.address, usdc.target)).to.equal(collateralFor(30n * E18));
+      expect(await market.balances(seller.address, usdc.target)).to.equal(collateralFor(80n * E18));
     });
 
-    it("should allow offer creator to distribute tokens", async () => {
-        let prevUserBal = await offerToken.balanceOf(addr2.address);
-        console.log("prevUserBal", prevUserBal.toString());
+    it("cancelOffer only before TGE and only when nothing is sold", async function () {
+      const { market, usdc, seller, alice } = await withOffer();
+      await market.connect(alice).buy(1n, 10n * E18);
+      await expect(market.connect(seller).cancelOffer(1n)).to.be.revertedWithCustomError(market, "OfferHasSales");
 
-        let prevCreatorBal = await stableToken.balanceOf(offer.creator);
-        console.log("prevCreatorBal", prevCreatorBal.toString());
-
-        let tx = await preMarket.connect(addr1).distributeTokensSell(offerId);
-        let receipt = await tx.wait();
-
-        await expect(receipt).to.emit(preMarket, "TokensDistributed").withArgs(offerId, addr1.address);
-
-        let offerDetail = await preMarket.getOfferDetails(offerId);
-
-        let afterUserBal = await offerToken.balanceOf(addr2.address);
-        console.log("afterUserBal", afterUserBal.toString());
-
-        let afterCreatorBal = await stableToken.balanceOf(offer.creator);
-        console.log("afterCreatorBal", afterCreatorBal.toString());
-
-        let commissions = await preMarket.getCommissionPercentage();
-        let receiveAmount = tokens(20).toString() - ((tokens(20).toString() * commissions[0].toString() / commissions[1].toString())/100);
-        receiveAmount = receiveAmount.toString();
-        console.log("receiveAmount", receiveAmount);
-
-        expect(afterUserBal).to.equal((prevUserBal) + offerDetail.amtSold);
-        expect(afterCreatorBal).to.equal(BigInt(Number(prevCreatorBal) + Number(receiveAmount)));
+      const ctx = await withOffer();
+      await expect(ctx.market.connect(ctx.alice).cancelOffer(1n)).to.be.revertedWithCustomError(ctx.market, "NotSeller");
+      await expect(ctx.market.connect(ctx.seller).cancelOffer(1n)).to.emit(ctx.market, "OfferCancelled");
+      expect(await ctx.market.balances(ctx.seller.address, ctx.usdc.target)).to.equal(collateralFor(TOKENS));
+      await expect(ctx.market.connect(ctx.seller).cancelOffer(1n)).to.be.revertedWithCustomError(ctx.market, "OfferNotOpen");
     });
 
-    it("should not allow to distribute collateral tokens if TGE end time is passed", async () => {
-        await expect(preMarket.connect(addr2).distributeAfter24HoursSell(offerId, addr2.address)).to.be.revertedWith("TGE settle end time hasn't passed yet");
+    it("reclaimUnsold after TGE returns only the unsold collateral, once", async function () {
+      const { market, usdc, seller, tge } = await withSales();
+      await expect(market.connect(seller).reclaimUnsold(1n)).to.be.revertedWithCustomError(market, "TgeNotReached");
+      await time.increaseTo(tge);
+      await expect(market.connect(seller).reclaimUnsold(1n)).to.emit(market, "UnsoldReclaimed");
+      expect(await market.balances(seller.address, usdc.target)).to.equal(collateralFor(TOKENS) - collateralFor(80n * E18));
+      await expect(market.connect(seller).reclaimUnsold(1n)).to.be.revertedWithCustomError(market, "UnsoldAlreadyReclaimed");
     });
 
-    // it("should allow offer creator to distribute collateral tokens after 24 hrs of TGE", async () => {
-    //     // set the time to 24 hours after TGE
-    //     await preMarket.connect(deployer).editTimestamps(offer.OfferToken, Math.ceil(Date.now()/1000) - 96600, Math.ceil(Date.now()/1000) - 96400);
+    it("solvency: after delivery, reclaim and every withdrawal the contract holds nothing", async function () {
+      const { market, usdc, real, owner, seller, alice, bob, tge } = await withSales();
+      await time.increaseTo(tge);
+      await market.connect(owner).setRealToken(0n, real.target);
+      await market.connect(seller).deliver(1n);
+      await market.connect(seller).reclaimUnsold(1n);
+      for (const [who, token] of [[alice, real], [bob, real], [seller, usdc], [owner, usdc]]) {
+        await market.connect(who).withdraw(token.target);
+      }
+      expect(await usdc.balanceOf(market.target)).to.equal(0n);
+      expect(await real.balanceOf(market.target)).to.equal(0n);
+      await expect(market.connect(alice).withdraw(real.target)).to.be.revertedWithCustomError(market, "NothingToWithdraw");
+    });
+  });
 
-    //     let prevCreatorBal = await collateralToken.balanceOf(addr2.address);
-    //     console.log("prevCreatorBal collateral", prevCreatorBal.toString());
-
-    //     let prevCreatorBal1 = await stableToken.balanceOf(addr2.address);
-    //     console.log("prevCreatorBal1 stable", prevCreatorBal1.toString());
-
-    //     let prevBalDeployer = await collateralToken.balanceOf(deployer.address);
-    //     console.log("prevBalDeployer collateral", prevBalDeployer.toString());
-
-    //     let tx = await preMarket.connect(addr2).distributeAfter24HoursSell(offerId, addr2.address);
-    //     let receipt = await tx.wait();
-
-    //     await expect(receipt).to.emit(preMarket, "CollateralTokensDistributed").withArgs(offerId, addr2.address);
-
-    //     let offerDetail = await preMarket.getOfferDetails(offerId);
-
-    //     let afterCreatorBal = await collateralToken.balanceOf(addr2.address);
-    //     console.log("afterCreatorBal collateral", afterCreatorBal.toString());
-
-    //     let afterCreatorBal1 = await stableToken.balanceOf(addr2.address);
-    //     console.log("afterCreatorBal1 stable", afterCreatorBal1.toString());
-
-    //     let afterBalDeployer = await collateralToken.balanceOf(deployer.address);
-    //     console.log("afterBalDeployer collateral", afterBalDeployer.toString());
-
-    //     let commissions = await preMarket.getCommissionPercentage();
-    //     let commissionAmount = (tokens(20).toString() * commissions[0].toString() / commissions[1].toString())/100;
-    //     let receiveAmount = tokens(20).toString() - commissionAmount;
-    //     receiveAmount = receiveAmount.toString();
-
-    //     expect(afterCreatorBal).to.equal(BigInt(Number(prevCreatorBal) + Number(receiveAmount)));
-    //     expect(afterCreatorBal1).to.equal(BigInt(Number(prevCreatorBal1) + Number(receiveAmount)));
-    //     expect(afterBalDeployer).to.equal(BigInt(Number(prevBalDeployer) + Number(commissionAmount)));
-    // });
-
-    it("should get the user offers", async () => {
-        let index = await preMarket.getLastAddedOfferIndex(addr1.address);
-        let userOffers = await preMarket.getUserOffers(addr1.address);
-        // console.log(userOffers);
-        expect(userOffers.length - 1).to.equal(index);
+  describe("admin", function () {
+    it("rejects bad constructor input, high fees, native value and renouncing", async function () {
+      const { market, owner, usdc } = await loadFixture(deploy);
+      await expect(ethers.deployContract("PremarketMarket", [owner.address, 50, usdc.target, usdc.target])).to.be.reverted;
+      await expect(market.connect(owner).setPlatformFee(101)).to.be.revertedWithCustomError(market, "PlatformFeeTooHigh");
+      await expect(owner.sendTransaction({ to: market.target, value: 1n })).to.be.revertedWithCustomError(market, "NativeValueNotAccepted");
+      await expect(market.connect(owner).renounceOwnership()).to.be.revertedWithCustomError(market, "OwnershipRenunciationDisabled");
     });
 
-    it.skip("create a new offer1 of offer type BUY and check the whole flow", async() => {
-        // set commission
-        await preMarket.connect(deployer).setCommission(25, 10);
-
-        // create offer
-        console.log("-------Creating offer1-------");
-        await stableToken.connect(addr1).approve(preMarket.target, tokens(200));
-
-        let prevBalStable = await stableToken.balanceOf(addr1.address);
-        console.log("prevBalStable stable", ethers.formatEther(prevBalStable.toString()));
-
-        let prevBalDeployer = await stableToken.balanceOf(deployer.address);
-        console.log("prevBalDeployer stable", ethers.formatEther(prevBalDeployer.toString()));
-
-        let tx = await preMarket.connect(addr1).createOffer(offer1);
-        let receipt = await tx.wait();
-
-        await expect(receipt).to.emit(preMarket, "OfferCreated").withArgs(0, addr1.address);
-        offerId1 = 0;
-
-        let afterBalStable = await stableToken.balanceOf(addr1.address);
-        console.log("afterBalStable stable", ethers.formatEther(afterBalStable.toString()));
-
-        let afterBalDeployer = await stableToken.balanceOf(deployer.address);
-        console.log("afterBalDeployer stable", ethers.formatEther(afterBalDeployer.toString()));
-
-        let commissions = await preMarket.getCommissionPercentage();
-        let commissionAmount = (offer1.StableTokenAmount.toString() * commissions[0].toString() / commissions[1].toString())/100;
-        commissionAmount = commissionAmount.toString();
-
-        expect(afterBalStable).to.equal(prevBalStable - offer1.StableTokenAmount);
-        expect(afterBalDeployer).to.equal(prevBalDeployer + BigInt(commissionAmount));
-
-        let offerDetail = await preMarket.getOfferDetails(offerId1);
-        expect(offerDetail.OfferTokenAmount).to.equal(offer1.OfferTokenAmount);
-        expect(offerDetail.OfferToken).to.equal(offer1.OfferToken);
-        expect(offerDetail.creator).to.equal(offer1.creator);
-
-        // contribute to the offer
-        console.log("------Contributing to offer1-------");
-        await offerToken.connect(addr2).approve(preMarket.target, tokens(10));
-        await collateralToken.connect(addr2).approve(preMarket.target, tokens(20));
-
-        let prevBalCollateral = await collateralToken.balanceOf(addr2.address);
-        console.log("prevBalCollateral collateral", ethers.formatEther(prevBalCollateral.toString()));
-
-        let prevBalContract1 = await collateralToken.balanceOf(preMarket.target);
-        console.log("prevBalContract collateral", ethers.formatEther(prevBalContract1.toString()));
-
-        let tx1 = await preMarket.connect(addr2).contributeToOffer(offerId1, tokens(20), tokens(10));
-        let receipt1 = await tx1.wait();
-
-        await expect(receipt1).to.emit(preMarket, "OfferContribution").withArgs(offerId1, addr2.address, tokens(20));
-
-        let afterBalCollateral = await collateralToken.balanceOf(addr2.address);
-        console.log("afterBalCollateral collateral", ethers.formatEther(afterBalCollateral.toString()));
-
-        let afterBalContract1 = await collateralToken.balanceOf(preMarket.target);
-        console.log("afterBalContract collateral", ethers.formatEther(afterBalContract1.toString()));
-
-        let offerDetail1 = await preMarket.getOfferDetails(offerId1);
-        expect(offerDetail1.amtSold).to.equal(tokens(10));
-        expect(afterBalCollateral).to.equal(prevBalCollateral - tokens(20));
-        expect(afterBalContract1).to.equal(prevBalContract1 + tokens(20));
-
-        // distribute tokens
-        console.log("------Distributing tokens-------");
-
-        // let prevUserBalCollateral = await collateralToken.balanceOf(addr2.address);
-        // console.log("prevUserBal collateral", ethers.formatEther(prevUserBalCollateral.toString()));
-
-        // let prevUserBalStable = await stableToken.balanceOf(addr2.address);
-        // console.log("prevUserBal stable", ethers.formatEther(prevUserBalStable.toString()));
-
-        // let prevCreatorBal = await offerToken.balanceOf(offer1.creator);
-        // console.log("prevCreatorBal offer", ethers.formatEther(prevCreatorBal.toString()));
-
-        // let prevBalContract2 = await collateralToken.balanceOf(preMarket.target);
-        // console.log("prevBalContract collateral", ethers.formatEther(prevBalContract2.toString()));
-
-        // let prevBalContract3 = await stableToken.balanceOf(preMarket.target);
-        // console.log("prevBalContract stable", ethers.formatEther(prevBalContract3.toString()));
-
-        // // set TGE to current time
-        // await preMarket.connect(deployer).editTimestamps(offer1.OfferToken, Math.ceil(Date.now()/1000) - 5, Math.ceil(Date.now()/1000));
-
-        // let tx2 = await preMarket.connect(addr1).distributeTokensBuy(offerId1, addr2.address);
-        // let receipt2 = await tx2.wait();
-
-        // await expect(receipt2).to.emit(preMarket, "TokensDistributed").withArgs(offerId1, addr2.address);
-
-        // let afterUserBalCollateral = await collateralToken.balanceOf(addr2.address);
-        // console.log("afterUserBal collateral", ethers.formatEther(afterUserBalCollateral.toString()));
-
-        // let afterUserBalStable = await stableToken.balanceOf(addr2.address);
-        // console.log("afterUserBalStable stable", ethers.formatEther(afterUserBalStable.toString()));
-
-        // let afterCreatorBal = await offerToken.balanceOf(offer1.creator);
-        // console.log("afterCreatorBal offer", ethers.formatEther(afterCreatorBal.toString()));
-
-        // let afterBalContract2 = await collateralToken.balanceOf(preMarket.target);
-        // console.log("afterBalContract collateral", ethers.formatEther(afterBalContract2.toString()));
-
-        // let afterBalContract3 = await stableToken.balanceOf(preMarket.target);
-        // console.log("afterBalContract stable", ethers.formatEther(afterBalContract3.toString()));
-
-        // let receiveAmount = tokens(20).toString() - ((tokens(20).toString() * commissions[0].toString() / commissions[1].toString())/100);
-        // receiveAmount = receiveAmount.toString();
-
-        // await expect(afterUserBalCollateral).to.equal((prevUserBalCollateral) + tokens(20));
-        // await expect(afterCreatorBal).to.equal(BigInt(Number(prevCreatorBal) + Number(offerDetail1.amtSold)));
-        // await expect(afterUserBalStable).to.equal(BigInt(Number(prevUserBalStable) + Number(receiveAmount)));
-
-        // distribute tokens after 24 hours of TGE
-        console.log("------Distributing tokens after 24 hrs of TGE-------");
-
-        let prevCreatorBalCollateral = await collateralToken.balanceOf(offer1.creator);
-        console.log("prevCreatorBal collateral", ethers.formatEther(prevCreatorBalCollateral.toString()));
-
-        let prevCreatorBalStable = await stableToken.balanceOf(offer1.creator);
-        console.log("prevCreatorBal stable", ethers.formatEther(prevCreatorBalStable.toString()));
-
-        let prevBalContract4 = await collateralToken.balanceOf(preMarket.target);
-        console.log("prevBalContract collateral", ethers.formatEther(prevBalContract4.toString()));
-
-        let prevBalContract5 = await stableToken.balanceOf(preMarket.target);
-        console.log("prevBalContract stable", ethers.formatEther(prevBalContract5.toString()));
-
-        let prevBalDeployer1 = await collateralToken.balanceOf(deployer.address);
-        console.log("prevBalDeployer collateral", ethers.formatEther(prevBalDeployer1.toString()));
-
-        // set the time to 24 hours after TGE
-        await preMarket.connect(deployer).editTimestamps(offer1.OfferToken, Math.ceil(Date.now()/1000) - 96600, Math.ceil(Date.now()/1000) - 96400);
-
-        let tx4 = await preMarket.connect(addr1).distributeAfter24HoursBuy(offerId1);
-        let receipt4 = await tx4.wait();
-
-        await expect(receipt4).to.emit(preMarket, "CollateralTokensDistributed").withArgs(offerId1, addr1.address);
-
-        let afterCreatorBalCollateral = await collateralToken.balanceOf(offer1.creator);
-        console.log("afterCreatorBal collateral", ethers.formatEther(afterCreatorBalCollateral.toString()));
-
-        let afterCreatorBalStable = await stableToken.balanceOf(offer1.creator);
-        console.log("afterCreatorBal stable", ethers.formatEther(afterCreatorBalStable.toString()));
-
-        let afterBalDeployer1 = await collateralToken.balanceOf(deployer.address);
-        console.log("afterBalDeployer1 collateral", ethers.formatEther(afterBalDeployer1.toString()));
-
-        let commissionAmountStable = (offerDetail1.StableTokenAmount.toString() * commissions[0].toString() / commissions[1].toString())/100;
-        let receiveAmountStable = offerDetail1.StableTokenAmount.toString() - commissionAmountStable;
-        receiveAmountStable = receiveAmountStable.toString();
-
-        let commissionAmountCollateral = (tokens(20).toString() * commissions[0].toString() / commissions[1].toString())/100;
-        let receiveAmountCollateral = tokens(20).toString() - commissionAmountCollateral;
-        receiveAmountCollateral = receiveAmountCollateral.toString();
-
-        let commissionAmountDeployer = (tokens(20).toString() * commissions[0].toString() / commissions[1].toString())/100;
-        commissionAmountDeployer = commissionAmountDeployer.toString();
-
-        await expect(afterCreatorBalCollateral).to.equal(BigInt(Number(prevCreatorBalCollateral) + Number(receiveAmountCollateral)));
-        await expect(afterCreatorBalStable).to.equal(BigInt(Number(prevCreatorBalStable) + Number(receiveAmountStable)));
-        await expect(afterBalDeployer1).to.equal(BigInt(Number(prevBalDeployer1) + Number(commissionAmountDeployer)));
+    it("an inactive market blocks new offers and buys", async function () {
+      const { market, usdc, owner, seller } = await loadFixture(deploy);
+      await market.connect(owner).setMarketActive(0n, false);
+      await expect(market.connect(seller).createOffer(0n, usdc.target, TOKENS, PRICE)).to.be.revertedWithCustomError(market, "MarketInactive");
     });
-
-    // create a new offer2 of offer type BUY and check the cancel flow after creating the offer
-    it.skip("create a new offer2 of offer type BUY and check the cancel flow after creating the offer", async() => {
-        // create offer
-        console.log("-------Creating offer2-------");
-        await preMarket.setCommission(25, 10);
-
-        await stableToken.connect(addr1).approve(preMarket.target, tokens(200));
-
-        let prevBalStable = await stableToken.balanceOf(addr1.address);
-        console.log("prevBalStable stable", ethers.formatEther(prevBalStable.toString()));
-
-        let tx = await preMarket.connect(addr1).createOffer(offer1);
-        let receipt = await tx.wait();
-
-        await expect(receipt).to.emit(preMarket, "OfferCreated").withArgs(0, addr1.address);
-        offerId1 = 0;
-
-        let afterBalStable = await stableToken.balanceOf(addr1.address);
-        console.log("afterBalStable stable", ethers.formatEther(afterBalStable.toString()));
-
-        expect(afterBalStable).to.equal(prevBalStable - offer1.StableTokenAmount);
-
-        let offerDetail = await preMarket.getOfferDetails(offerId1);
-        expect(offerDetail.OfferTokenAmount).to.equal(offer1.OfferTokenAmount);
-        expect(offerDetail.OfferToken).to.equal(offer1.OfferToken);
-        expect(offerDetail.creator).to.equal(offer1.creator);
-
-        // cancel the offer
-        console.log("------Cancelling offer2-------");
-
-        let prevBalStable1 = await stableToken.balanceOf(addr1.address);
-        console.log("prevBalStable stable", ethers.formatEther(prevBalStable1.toString()));
-
-        let tx1 = await preMarket.connect(addr1).cancelOffer(offerId1);
-        let receipt1 = await tx1.wait();
-
-        await expect(receipt1).to.emit(preMarket, "OfferCancelled").withArgs(offerId1, addr1.address);
-
-        let afterBalStable1 = await stableToken.balanceOf(addr1.address);
-        console.log("afterBalStable stable", ethers.formatEther(afterBalStable1.toString()));
-
-        let commissions = await preMarket.getCommissionPercentage();
-        let commissionAmount = (offerDetail.StableTokenAmount.toString() * commissions[0].toString() / commissions[1].toString())/100;
-        commissionAmount = commissionAmount.toString();
-
-        let receiveAmount = offerDetail.StableTokenAmount.toString() - commissionAmount;
-        receiveAmount = receiveAmount.toString();
-
-        await expect(afterBalStable1).to.equal(BigInt(Number(prevBalStable1) + Number(receiveAmount)));
-    });
-
-    it.skip("create a new offer2 of offer type SELL and check the cancel flow after creating the offer", async() => {
-        // create offer
-        console.log("-------Creating offer2-------");
-        await preMarket.setCommission(25, 10);
-
-        await collateralToken.connect(addr1).approve(preMarket.target, tokens(200));
-
-        let prevBalCollateral = await collateralToken.balanceOf(addr1.address);
-        console.log("prevBalCollateral collateral", ethers.formatEther(prevBalCollateral.toString()));
-
-        let tx = await preMarket.connect(addr1).createOffer(offer);
-        let receipt = await tx.wait();
-
-        await expect(receipt).to.emit(preMarket, "OfferCreated").withArgs(0, addr1.address);
-        offerId = 0;
-
-        let afterBalCollateral = await collateralToken.balanceOf(addr1.address);
-        console.log("afterBalCollateral collateral", ethers.formatEther(afterBalCollateral.toString()));
-
-        expect(afterBalCollateral).to.equal(prevBalCollateral - offer.CollateralTokenAmount);
-
-        let offerDetail = await preMarket.getOfferDetails(offerId);
-        expect(offerDetail.OfferTokenAmount).to.equal(offer.OfferTokenAmount);
-        expect(offerDetail.OfferToken).to.equal(offer.OfferToken);
-        expect(offerDetail.creator).to.equal(offer.creator);
-
-        // cancel the offer
-        console.log("------Cancelling offer2-------");
-
-        let prevBalCollateral1 = await collateralToken.balanceOf(addr1.address);
-        console.log("prevBalCollateral collateral", ethers.formatEther(prevBalCollateral1.toString()));
-
-        let prevBalDeployer = await collateralToken.balanceOf(deployer.address);
-        console.log("prevBalDeployer collateral", ethers.formatEther(prevBalDeployer.toString()));
-
-        let tx1 = await preMarket.connect(addr1).cancelOffer(offerId);
-        let receipt1 = await tx1.wait();
-
-        await expect(receipt1).to.emit(preMarket, "OfferCancelled").withArgs(offerId, addr1.address);
-
-        let afterBalCollateral1 = await collateralToken.balanceOf(addr1.address);
-        console.log("afterBalCollateral collateral", ethers.formatEther(afterBalCollateral1.toString()));
-
-        let afterBalDeployer = await collateralToken.balanceOf(deployer.address);
-        console.log("afterBalDeployer collateral", ethers.formatEther(afterBalDeployer.toString()));
-
-        let commissions = await preMarket.getCommissionPercentage();
-        let commissionAmount = (offerDetail.CollateralTokenAmount.toString() * commissions[0].toString() / commissions[1].toString())/100;
-        commissionAmount = commissionAmount.toString();
-
-        let receiveAmount = offerDetail.CollateralTokenAmount.toString() - commissionAmount;
-        receiveAmount = receiveAmount.toString();
-
-        await expect(afterBalCollateral1).to.equal(BigInt(Number(prevBalCollateral1) + Number(receiveAmount)));
-        await expect(afterBalDeployer).to.equal(BigInt(Number(prevBalDeployer) + Number(commissionAmount)));
-    });
+  });
 });
