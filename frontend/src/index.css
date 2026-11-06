@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+/* Design tokens: dark trading UI (default) with a light theme. */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-buy: var(--buy);
+  --color-sell: var(--sell);
+  --color-warn: var(--warn);
+}
+
+:root {
+  --page: #070b14;
+  --surface: #0d1422;
+  --surface-2: #131c2e;
+  --line: #1f2a40;
+  --ink: #e6ebf5;
+  --muted: #8a96ad;
+  --accent: #3ee0a1;
+  --accent-ink: #04120c;
+  --buy: #3ee0a1;
+  --sell: #ff6b7a;
+  --warn: #f5b84a;
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --page: #f5f7fb;
+  --surface: #ffffff;
+  --surface-2: #eef2f8;
+  --line: #dde3ee;
+  --ink: #0d1422;
+  --muted: #5b6780;
+  --accent: #0fa86f;
+  --accent-ink: #ffffff;
+  --buy: #0fa86f;
+  --sell: #d93a4c;
+  --warn: #b7791f;
+  color-scheme: light;
+}
+
+html,
+body {
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
