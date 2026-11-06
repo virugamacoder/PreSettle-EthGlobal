@@ -51,6 +51,18 @@ function ThemeToggle() {
   );
 }
 
+/** Chain logo from RainbowKit, or a lettered dot for chains it has no icon for (Arc, Arkiv). */
+function ChainIcon({ chain }) {
+  if (chain.hasIcon && chain.iconUrl) {
+    return <img src={chain.iconUrl} alt="" className="h-5 w-5 rounded-full" style={{ background: chain.iconBackground }} />;
+  }
+  return (
+    <span className="grid h-5 w-5 place-items-center rounded-full bg-brand-gradient text-[11px] font-bold text-accent-ink" aria-hidden>
+      {chain.name?.[0] ?? "?"}
+    </span>
+  );
+}
+
 /** Wallet button in the original style: gradient "Connect" pill, then the account pill. */
 export function WalletButton() {
   return (
@@ -58,7 +70,7 @@ export function WalletButton() {
       {({ account, chain, openAccountModal, openChainModal, openConnectModal, mounted }) => {
         const ready = mounted;
         const connected = ready && account && chain;
-        const pill = "h-10 rounded-full px-5 text-[15px] font-semibold transition-transform active:scale-[0.98]";
+        const pill = "h-10 whitespace-nowrap rounded-full px-4 text-[15px] font-semibold transition-transform active:scale-[0.98] sm:px-5";
         if (!connected) {
           return (
             <button type="button" onClick={openConnectModal} className={`${pill} bg-brand-gradient text-accent-ink`} aria-hidden={!ready}>
@@ -74,10 +86,22 @@ export function WalletButton() {
           );
         }
         return (
-          <button type="button" onClick={openAccountModal} className={`${pill} flex items-center gap-2 border border-line bg-surface text-ink`}>
-            <span className="h-2.5 w-2.5 rounded-full bg-brand-gradient" aria-hidden />
-            {account.displayName}
-          </button>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <button
+              type="button"
+              onClick={openChainModal}
+              title="Switch network"
+              className={`${pill} flex items-center gap-2 border border-line bg-surface px-3 text-ink sm:px-4`}
+            >
+              <ChainIcon chain={chain} />
+              <span className="hidden sm:inline">{chain.name}</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="text-muted" aria-hidden><path d="m6 9 6 6 6-6" /></svg>
+            </button>
+            <button type="button" onClick={openAccountModal} className={`${pill} flex items-center gap-2 border border-line bg-surface text-ink`}>
+              <span className="h-2.5 w-2.5 rounded-full bg-brand-gradient" aria-hidden />
+              {account.displayName}
+            </button>
+          </div>
         );
       }}
     </ConnectButton.Custom>
@@ -89,7 +113,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-surface/90 backdrop-blur-xl">
-      <div className="mx-auto flex h-[72px] max-w-7xl items-center gap-6 px-4 sm:px-8">
+      <div className="mx-auto flex h-[72px] max-w-7xl items-center gap-3 px-4 sm:gap-6 sm:px-8">
         <Link to="/" aria-label="Pre Settle home">
           <Logo />
         </Link>
@@ -100,7 +124,7 @@ export function Header() {
           ))}
         </nav>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
           <ThemeToggle />
           <WalletButton />
           <button

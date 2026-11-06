@@ -6,7 +6,8 @@ import { settings } from "./env.js";
 
 // Arkiv chain for wallet writes. No access key here: the wallet stores this
 // chain's RPC URL, and the key must never end up in a user's wallet.
-export const arkivWalletChain = rabdi({ accessKey: "" });
+// Renamed so the network switcher reads "Arkiv Rabdi" instead of just "Rabdi".
+export const arkivWalletChain = { ...rabdi({ accessKey: "" }), name: "Arkiv Rabdi" };
 
 // Arc Testnet first: it's the default chain (contracts + USDC settlement).
 // Arkiv: users sign order-book writes. Sepolia: ENSv2 (broker prefs).

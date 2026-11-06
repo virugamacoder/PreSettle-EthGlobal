@@ -23,7 +23,7 @@ export function Logo({ compact = false }) {
     <span className="flex items-center gap-2.5">
       <LogoMark />
       {!compact && (
-        <span className="text-lg font-semibold tracking-tight">
+        <span className="hidden whitespace-nowrap text-lg font-semibold tracking-tight min-[440px]:inline">
           Pre<span className="text-brand-gradient"> Settle</span>
         </span>
       )}

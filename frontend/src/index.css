@@ -45,6 +45,16 @@
   --color-buy: var(--buy);
   --color-sell: var(--sell);
   --color-warn: var(--warn);
+
+  /* Fixed colors the original SettleX icons reference by name. */
+  --color-baseWhite: #fefefe;
+  --color-baseWhiteDark: #000009;
+  --color-primary1000: #3bc346;
+  --color-primary1000Dark: #57db63;
+  --color-blue300: #002a90;
+  --color-blue300Dark: #e4eaf9;
+  --color-success300: #199e6d;
+  --color-success300Dark: #b7f4de;
 }
 
 :root {

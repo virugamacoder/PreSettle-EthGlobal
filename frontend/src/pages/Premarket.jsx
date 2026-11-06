@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { PageHeader, Panel, SectionTitle, EmptyState } from "../components/PageHeader.jsx";
 import { TokenAvatar, TokenBanners } from "../components/TokenBanners.jsx";
 import { ArkivBadge } from "../components/OrderList.jsx";
+import { MarketStats } from "../components/MarketStats.jsx";
 import { EyeGrayIcon, SearchIcon } from "../assets/icons/index.jsx";
 import { usePremarketOffers } from "../hooks/usePremarket.js";
 import { useViewCounts } from "../hooks/useViews.js";
@@ -96,6 +97,10 @@ export default function Premarket() {
       />
 
       <TokenBanners items={featured} selected={symbol} onSelect={setSymbol} />
+
+      <div className="mb-8">
+        <MarketStats />
+      </div>
 
       <SectionTitle>Live Deals</SectionTitle>
       <Panel
