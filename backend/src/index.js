@@ -1,6 +1,7 @@
 import { config, logFeatures } from "./config.js";
 import { createApp } from "./app.js";
 import { startKeeper } from "./keeper.js";
+import { views } from "./services/views.js";
 
 const app = createApp();
 
@@ -14,6 +15,7 @@ const stopKeeper = startKeeper();
 function shutdown(signal) {
   console.log(`${signal} received, shutting down`);
   stopKeeper();
+  views.flush();
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(1), 10_000).unref();
 }

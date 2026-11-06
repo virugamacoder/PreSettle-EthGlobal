@@ -4,6 +4,7 @@ import { asc, gt } from "@arkiv-network/sdk/query";
 import { key } from "@arkiv-network/sdk/schema";
 import { arkivPublic } from "../chains.js";
 import { Fill, OtcOrder, PremarketOffer } from "../arkiv/schemas.js";
+import { views } from "./views.js";
 
 const BLOCK_SECONDS = 2n;
 const DAY_BLOCKS = 86_400n / BLOCK_SECONDS;
@@ -101,7 +102,9 @@ export async function getAnalytics() {
       fetchAll(Fill, { $createdAt: true, baseToken: true, quoteToken: true, symbol: true, amount: true, price: true }),
       arkivPublic.getBlockNumber(),
     ]);
-    const data = { ...summarize({ orders, offers, fills, currentBlock }), updatedAt: new Date().toISOString() };
+    const live = new Set([...orders, ...offers].map((e) => String(e.$key).toLowerCase()));
+    const mostViewed = views.top(50).filter((v) => live.has(v.key)).slice(0, 5);
+    const data = { ...summarize({ orders, offers, fills, currentBlock }), mostViewed, updatedAt: new Date().toISOString() };
     cache = { at: Date.now(), data, pending: null };
     return data;
   })();

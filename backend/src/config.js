@@ -1,4 +1,5 @@
 import "dotenv/config";
+import path from "node:path";
 import { z } from "zod";
 
 const address = z
@@ -55,6 +56,9 @@ const schema = z.object({
 
   // Token prices
   COINMARKETCAP_API_KEY: optional(z.string()),
+
+  // Writable folder for view counts and uploaded images (a Docker volume in production)
+  DATA_DIR: z.string().default("./data"),
 });
 
 const parsed = schema.safeParse(process.env);
@@ -96,6 +100,7 @@ export const config = {
   auth: { secret: env.AUTH_SECRET, siweDomain: env.SIWE_DOMAIN },
   keeper: { enabled: env.KEEPER_ENABLED, intervalMs: env.KEEPER_INTERVAL_MS },
   prices: { coinMarketCapKey: env.COINMARKETCAP_API_KEY },
+  dataDir: path.resolve(env.DATA_DIR),
 };
 
 // Which features can run with the current configuration.

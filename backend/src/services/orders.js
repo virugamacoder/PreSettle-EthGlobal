@@ -4,6 +4,7 @@ import { arkivPublic } from "../chains.js";
 import { OtcOrder } from "../arkiv/schemas.js";
 import { readOrders } from "../contracts/otc.js";
 import { features } from "../config.js";
+import { views } from "./views.js";
 
 const SELECT = {
   $key: true,
@@ -46,6 +47,7 @@ function toOrder(row) {
     makerEns: v("makerEns"),
     arcTx: v("arcTx"),
     termsRef: v("termsRef"),
+    views: views.get(String(row.$key).toLowerCase()),
   };
 }
 

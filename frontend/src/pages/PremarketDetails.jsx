@@ -11,6 +11,7 @@ import { TxSteps, errorMessage, initSteps, updateStep } from "../components/TxSt
 import { PremarketActions } from "../components/PremarketActions.jsx";
 import { useMarket, useOnchainOffer, usePremarketListing, usePurchase } from "../hooks/usePremarket.js";
 import { useTokens, tokenLabel } from "../hooks/useTokens.js";
+import { useRecordView } from "../hooks/useViews.js";
 import { OFFER_STATUS, PREMARKET_ABI, PRE_TOKEN_DECIMALS, collateralFor, marketPhase } from "../contracts/premarket.js";
 import { Fill } from "../arkiv/schemas.js";
 import { getArkivWallet } from "../arkiv/wallet.js";
@@ -42,6 +43,7 @@ export default function PremarketDetails() {
   const { address } = useAccount();
   const { byAddress } = useTokens();
   const listing = usePremarketListing(key);
+  const views = useRecordView(key);
   const offerQ = useOnchainOffer(listing.data?.offerId);
   const offer = offerQ.data;
   const marketQ = useMarket(listing.data?.marketId);
@@ -167,6 +169,7 @@ export default function PremarketDetails() {
           <Row label="Seller"><span title={o.seller}>{shortAddress(o.seller)}</span></Row>
           {purchase.data > 0n && <Row label="Your purchase"><span className="num text-accent">{pre(purchase.data)} {o.symbol}</span></Row>}
           <Row label="Escrow"><a href={arcExplorer.tx(o.arcTx)} target="_blank" rel="noreferrer" className="text-accent hover:underline">Arc transaction</a></Row>
+          {views !== null && <Row label="Views"><span className="num">👁 {views}</span></Row>}
           <Row label="Listing"><a href={arkivExplorer.entity(o.key)} target="_blank" rel="noreferrer" className="text-accent hover:underline">Arkiv entity</a></Row>
         </section>
 

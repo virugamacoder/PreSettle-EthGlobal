@@ -11,6 +11,9 @@ RUN npm ci --omit=dev && npm cache clean --force
 COPY src ./src
 COPY scripts ./scripts
 
+# Writable data folder (view counts, uploaded images), mounted as a volume.
+RUN mkdir -p /app/data && chown node:node /app/data
+
 # Run as the unprivileged "node" user that ships with the image.
 USER node
 EXPOSE 3000

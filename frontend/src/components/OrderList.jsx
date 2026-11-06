@@ -78,7 +78,10 @@ export function OrderList({ orders, byAddress }) {
                   <span title={o.maker}>{o.makerEns || shortAddress(o.maker)}</span>
                   {o.brokerEns && <div>via <BrokerBadge name={o.brokerEns} address={o.broker} /></div>}
                 </td>
-                <td className="num px-4 py-3 text-muted">{timeLeft(o.deadline)}</td>
+                <td className="num px-4 py-3 text-muted">
+                  {timeLeft(o.deadline)}
+                  {o.views > 0 && <div className="text-xs" title="Views">👁 {o.views}</div>}
+                </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-3">
                     <ArkivBadge entityKey={o.key} />

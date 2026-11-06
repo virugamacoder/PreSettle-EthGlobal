@@ -6,6 +6,7 @@ import { chainStatus, platformAccount } from "./chains.js";
 import { keeperStatus } from "./keeper.js";
 import { ordersRouter } from "./routes/orders.js";
 import { analyticsRouter } from "./routes/analytics.js";
+import { viewsRouter } from "./routes/views.js";
 import { authRouter } from "./routes/auth.js";
 import { adminBrokersRouter, brokersRouter } from "./routes/brokers.js";
 
@@ -13,6 +14,8 @@ export function createApp() {
   const app = express();
 
   app.disable("x-powered-by");
+  // Behind nginx: use X-Forwarded-For for the visitor IP (view de-duplication).
+  app.set("trust proxy", 1);
   app.use(helmet());
   app.use(cors(config.corsOrigins.length ? { origin: config.corsOrigins } : undefined));
   app.use(express.json({ limit: "1mb" }));
@@ -52,6 +55,7 @@ export function createApp() {
 
   app.use("/v1/orders", ordersRouter);
   app.use("/v1/analytics", analyticsRouter);
+  app.use("/v1/views", viewsRouter);
   app.use("/v1/auth", authRouter);
   app.use("/v1/brokers", brokersRouter);
   app.use("/v1/admin/brokers", adminBrokersRouter);

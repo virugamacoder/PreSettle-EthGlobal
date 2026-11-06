@@ -4,6 +4,7 @@ import { PageHeader, EmptyState } from "../components/PageHeader.jsx";
 import { MarketStats } from "../components/MarketStats.jsx";
 import { ArkivBadge, Pill } from "../components/OrderList.jsx";
 import { usePremarketOffers } from "../hooks/usePremarket.js";
+import { useViewCounts } from "../hooks/useViews.js";
 import { useTokens, tokenLabel } from "../hooks/useTokens.js";
 import { formatAmount, shortAddress, timeLeft } from "../lib/format.js";
 import { mulDecimal } from "../lib/amounts.js";
@@ -14,6 +15,7 @@ export default function Premarket() {
   const all = usePremarketOffers();
   const offers = (all.data ?? []).filter((o) => !symbol || o.symbol === symbol);
   const symbols = [...new Set((all.data ?? []).map((o) => o.symbol))].sort();
+  const viewCounts = useViewCounts(offers.map((o) => o.key.toLowerCase()));
 
   return (
     <>
@@ -70,7 +72,10 @@ export default function Premarket() {
                   <dd className="text-right" title={o.seller}>{shortAddress(o.seller)}</dd>
                 </dl>
                 <div className="mt-auto flex items-center justify-between">
-                  <ArkivBadge entityKey={o.key} />
+                  <span className="flex items-center gap-3">
+                    <ArkivBadge entityKey={o.key} />
+                    {viewCounts[o.key.toLowerCase()] > 0 && <span className="num text-xs text-muted" title="Views">👁 {viewCounts[o.key.toLowerCase()]}</span>}
+                  </span>
                   <Link to={`/premarket/${o.key}`} className="rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-accent-ink">View offer</Link>
                 </div>
               </li>

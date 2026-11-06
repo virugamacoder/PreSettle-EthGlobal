@@ -9,6 +9,7 @@ import { PageHeader, EmptyState } from "../components/PageHeader.jsx";
 import { Pill } from "../components/OrderList.jsx";
 import { TxSteps, errorMessage, initSteps, updateStep } from "../components/TxSteps.jsx";
 import { useArkivOrder, useOnchainOrder } from "../hooks/useOrder.js";
+import { useRecordView } from "../hooks/useViews.js";
 import { useTokens, tokenLabel } from "../hooks/useTokens.js";
 import { OTC_ABI, orientation } from "../contracts/otc.js";
 import { Fill } from "../arkiv/schemas.js";
@@ -36,6 +37,7 @@ export default function OtcDetails() {
   const { address } = useAccount();
   const { byAddress } = useTokens();
   const listing = useArkivOrder(key);
+  const views = useRecordView(key);
   const order = listing.data;
   const chain = useOnchainOrder(order?.orderId);
   const onchain = chain.data;
@@ -216,6 +218,7 @@ export default function OtcDetails() {
           <Row label="Escrow">
             <a href={arcExplorer.tx(order.arcTx)} target="_blank" rel="noreferrer" className="text-accent hover:underline">Arc transaction</a>
           </Row>
+          {views !== null && <Row label="Views"><span className="num">👁 {views}</span></Row>}
           <Row label="Listing">
             <a href={arkivExplorer.entity(order.key)} target="_blank" rel="noreferrer" className="text-accent hover:underline">Arkiv entity</a>
           </Row>

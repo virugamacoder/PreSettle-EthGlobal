@@ -9,6 +9,10 @@ services:
     env_file: .env
     init: true
     restart: unless-stopped
+    environment:
+      DATA_DIR: /app/data
+    volumes:
+      - data:/app/data
     expose:
       - "3000"
     logging:
@@ -29,3 +33,6 @@ services:
     logging:
       driver: json-file
       options: { max-size: "5m", max-file: "3" }
+
+volumes:
+  data:
