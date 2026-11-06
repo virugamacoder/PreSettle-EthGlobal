@@ -1,10 +1,11 @@
+import { config, logFeatures } from "./config.js";
 import { createApp } from "./app.js";
 
-const port = Number(process.env.PORT) || 3000;
 const app = createApp();
 
-const server = app.listen(port, () => {
-  console.log(`pre-settle-backend listening on port ${port}`);
+const server = app.listen(config.port, () => {
+  console.log(`pre-settle-backend listening on port ${config.port} (${config.env})`);
+  logFeatures();
 });
 
 function shutdown(signal) {

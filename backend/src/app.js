@@ -1,13 +1,14 @@
 import express from "express";
 import helmet from "helmet";
 import cors from "cors";
+import { config, features } from "./config.js";
 
 export function createApp() {
   const app = express();
 
   app.disable("x-powered-by");
   app.use(helmet());
-  app.use(cors());
+  app.use(cors(config.corsOrigins.length ? { origin: config.corsOrigins } : undefined));
   app.use(express.json({ limit: "1mb" }));
 
   // Used by the Docker healthcheck, nginx and the deploy workflow.
@@ -17,6 +18,16 @@ export function createApp() {
       service: "pre-settle-backend",
       uptime: Math.floor(process.uptime()),
       timestamp: new Date().toISOString(),
+    });
+  });
+
+  // Public, non-secret configuration the frontend can read.
+  app.get("/v1/config", (req, res) => {
+    res.json({
+      arc: { chainId: config.arc.chainId, usdc: config.arc.usdc, eurc: config.arc.eurc, contracts: config.arc.contracts },
+      ens: { parentName: config.ens.parentName, userRegistry: config.ens.userRegistry ?? null },
+      arkiv: { adminAddress: config.arkiv.adminAddress ?? null },
+      features,
     });
   });
 
