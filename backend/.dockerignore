@@ -1,0 +1,41 @@
+# ── Node ─────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+
+# ── Environment ──────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── SSL Certificates (never in image — injected at runtime)
+*.key
+*.pem
+*.crt
+*.csr
+nginx/certs/
+
+# ── Git ──────────────────────────────────────────────────
+.git/
+.github/
+
+# ── Logs / Runtime ───────────────────────────────────────
+logs/
+*.log
+pids/
+*.pid
+
+# ── Test / Coverage ──────────────────────────────────────
+coverage/
+.nyc_output/
+
+# ── OS / IDE ─────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ── Uploads (volume mounted at runtime) ─────────────────
+uploads/
+
+# ── Deploy scripts (not needed inside container) ─────────
+deploy/
