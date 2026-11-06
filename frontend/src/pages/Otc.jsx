@@ -4,6 +4,7 @@ import { PageHeader, EmptyState } from "../components/PageHeader.jsx";
 import { OrderList } from "../components/OrderList.jsx";
 import { useOrders } from "../hooks/useOrders.js";
 import { useTokens } from "../hooks/useTokens.js";
+import { orientation } from "../contracts/otc.js";
 
 const SIDES = [
   { value: "", label: "All" },
@@ -17,16 +18,23 @@ export default function Otc() {
   const [maxPrice, setMaxPrice] = useState("");
   const [partialOnly, setPartialOnly] = useState(false);
 
+  // The "token" filter is the base token: offered in sell orders, wanted in buy orders.
   const filters = {
     side: side || undefined,
-    offerToken: offerToken || undefined,
+    offerToken: side === "sell" && offerToken ? offerToken : undefined,
+    wantToken: side === "buy" && offerToken ? offerToken : undefined,
     maxPrice: /^\d+(\.\d+)?$/.test(maxPrice) ? maxPrice : undefined,
     partial: partialOnly ? "true" : undefined,
   };
   const { tokens, byAddress } = useTokens();
   const { data, error, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useOrders(filters);
 
-  const orders = data?.pages.flatMap((p) => p.orders) ?? [];
+  const allOrders = data?.pages.flatMap((p) => p.orders) ?? [];
+  // With "All" sides the backend can't OR two columns, so filter the base token here.
+  const orders =
+    !side && offerToken
+      ? allOrders.filter((o) => orientation(o).base?.toLowerCase() === offerToken.toLowerCase())
+      : allOrders;
   const firstPage = data?.pages[0];
   const filteredOut = data?.pages.reduce((n, p) => n + (p.filteredOut || 0), 0) ?? 0;
 

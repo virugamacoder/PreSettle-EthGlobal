@@ -14,24 +14,37 @@ Token amounts use the token's own decimals. **USDC and EURC on Arc use 6 decimal
 | Function | Used by | Purpose |
 |---|---|---|
 | `getOrder(uint256 orderId) view returns (Order)` | backend `/v1/orders`, frontend | Verify Arkiv listings, show remaining amount |
-| `createOrder(...) returns (uint256 orderId)` | frontend "Create order" | Lock the offer token, open the order |
+| `createOrder(CreateParams p) returns (uint256 orderId)` | frontend "Create order" | Lock the offer token, open the order |
 | `fill(uint256 orderId, uint256 offerAmount)` | frontend "Buy/Sell" | Partial or full fill |
 | `cancel(uint256 orderId)` | frontend dashboard | Maker refunds the unfilled amount |
 | `expire(uint256 orderId)` | backend keeper | Anyone refunds the maker after the deadline |
 | `withdraw(address token)` | frontend dashboard | Pull-payment of proceeds and fees |
 
-`Order` struct the backend reads today ([backend/src/contracts/otc.js](../backend/src/contracts/otc.js)):
+Structs and event the app uses today ([backend/src/contracts/otc.js](../backend/src/contracts/otc.js), [frontend/src/contracts/otc.js](../frontend/src/contracts/otc.js)):
 
 ```solidity
+struct CreateParams {
+  address offerToken; uint256 offerAmount;      // what the maker locks
+  address wantToken;  uint256 wantAmount;       // what the maker wants in total
+  bool partialAllowed; uint64 deadline;         // unix seconds
+  address privateTaker;                         // 0x0 = anyone; set for broker deals
+  address broker; uint16 brokerFeeBps;          // 0x0 / 0 when no broker
+}
+
 struct Order {
   address maker; address offerToken; uint256 offerAmount;
   address wantToken; uint256 wantAmount; uint256 filledOffer;
   bool partialAllowed; uint64 deadline; address privateTaker;
   address broker; uint16 brokerFeeBps; bool cancelled;
 }
+
+event OrderCreated(uint256 indexed orderId, address indexed maker, address offerToken, address wantToken,
+                   uint256 offerAmount, uint256 wantAmount, uint64 deadline, address broker, address privateTaker);
 ```
 
-**Events:** `OrderCreated(uint256 indexed orderId, address indexed maker, ...)`. The frontend reads the new `orderId` from this event in the receipt, so please emit it. Also `OrderFilled`, `OrderCancelled`, `OrderExpired`.
+The frontend reads the new `orderId` from `OrderCreated` in the transaction receipt, so the **event signature must match exactly** (or send the ABI and the app is updated). Also emit `OrderFilled`, `OrderCancelled`, `OrderExpired`.
+
+`fill(orderId, offerAmount)`: `offerAmount` is how much of the maker's offered token the taker takes; the contract pulls the pro-rata `wantAmount` from the taker.
 
 ## PremarketMarket
 

@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import { arkivExplorer } from "../arkiv/client.js";
 import { formatAmount, shortAddress, timeLeft } from "../lib/format.js";
 import { tokenLabel } from "../hooks/useTokens.js";
+import { orientation } from "../contracts/otc.js";
 
 export function Pill({ tone = "muted", children }) {
   const tones = {
@@ -32,11 +33,12 @@ export function ArkivBadge({ entityKey }) {
   );
 }
 
-/** A maker sells offerToken for wantToken; takers see the opposite action. */
+/** Price is quote per 1 base; amount is in base (see contracts/otc.js). */
 function describe(order, byAddress) {
-  const offer = tokenLabel(byAddress, order.offerToken);
-  const want = tokenLabel(byAddress, order.wantToken);
-  return { offer, want, pair: `${offer} / ${want}` };
+  const { base, quote } = orientation(order);
+  const b = tokenLabel(byAddress, base);
+  const q = tokenLabel(byAddress, quote);
+  return { offer: b, want: q, pair: `${b} / ${q}` };
 }
 
 export function OrderList({ orders, byAddress }) {
