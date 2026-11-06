@@ -76,6 +76,14 @@ const CONTRACT_ERRORS = {
   NoUnsoldCollateral: "Everything was sold: no unsold collateral to reclaim.",
   UnexpectedTokenBalanceDelta: "This token takes a fee on transfer, so it can't be used.",
   OwnableUnauthorizedAccount: "Only the contract owner can do this.",
+  MarketHasOffers: "TGE can't be moved once the market has an offer.",
+  InvalidTge: "TGE must be in the future.",
+  InvalidDeliveryWindow: "The delivery window must be between 1 minute and 365 days.",
+  InvalidSymbolLength: "The symbol must be 1–32 characters.",
+  PlatformFeeTooHigh: "The platform fee can be at most 100 bps (1%).",
+  RealTokenAlreadySet: "The real token is already set for this market.",
+  InvalidRealToken: "That address isn't a usable token (and it can't be USDC or EURC).",
+  InvalidRealTokenDecimals: "The real token must have between 6 and 36 decimals.",
 };
 
 export function errorMessage(err) {

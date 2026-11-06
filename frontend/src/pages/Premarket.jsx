@@ -11,12 +11,12 @@ import { useTokens, tokenLabel } from "../hooks/useTokens.js";
 import { formatAmount, shortAddress, timeLeft } from "../lib/format.js";
 import { mulDecimal } from "../lib/amounts.js";
 
-function DealCard({ offer: o, coll, views }) {
+function DealCard({ offer: o, coll, views, logo }) {
   const preTge = o.tge > Date.now() / 1000;
   return (
     <li className="flex flex-col rounded-[14px] border border-line bg-surface p-3.5">
       <div className="flex items-center gap-2.5">
-        <TokenAvatar symbol={o.symbol} />
+        <TokenAvatar symbol={o.symbol} logo={logo} />
         <div className="flex flex-1 items-center justify-between">
           <div>
             <p className="font-semibold leading-tight">{o.symbol}</p>
@@ -67,7 +67,7 @@ function DealCard({ offer: o, coll, views }) {
 export default function Premarket() {
   const [symbol, setSymbol] = useState("");
   const [search, setSearch] = useState("");
-  const { byAddress } = useTokens();
+  const { byAddress, premarketLogos } = useTokens();
   const all = usePremarketOffers();
   const list = all.data ?? [];
 
@@ -78,7 +78,9 @@ export default function Premarket() {
     s.offers += 1;
     bySymbol.set(o.symbol, s);
   }
-  const featured = [...bySymbol.values()].sort((a, b) => b.offers - a.offers);
+  const featured = [...bySymbol.values()]
+    .sort((a, b) => b.offers - a.offers)
+    .map((f) => ({ ...f, logo: premarketLogos[f.symbol.toUpperCase()] }));
 
   const q = search.trim().toLowerCase();
   const offers = list.filter((o) => (!symbol || o.symbol === symbol) && (!q || o.symbol.toLowerCase().includes(q)));
@@ -142,7 +144,7 @@ export default function Premarket() {
         ) : (
           <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {offers.map((o) => (
-              <DealCard key={o.key} offer={o} coll={tokenLabel(byAddress, o.collateralToken)} views={viewCounts[o.key.toLowerCase()] ?? 0} />
+              <DealCard key={o.key} offer={o} coll={tokenLabel(byAddress, o.collateralToken)} views={viewCounts[o.key.toLowerCase()] ?? 0} logo={premarketLogos[o.symbol.toUpperCase()]} />
             ))}
           </ul>
         )}

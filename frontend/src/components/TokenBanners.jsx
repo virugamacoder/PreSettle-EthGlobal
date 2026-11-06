@@ -19,7 +19,7 @@ export function TokenAvatar({ symbol, logo, size = "h-12 w-12", text = "text-bas
 /**
  * Featured pre-launch tokens in the original banner style: a patterned card,
  * the token badge in a round frame, and its name on a label at the bottom.
- * `items`: [{ symbol, offers, tge }]
+ * `items`: [{ symbol, offers, tge, logo? }]
  */
 export function TokenBanners({ items, selected, onSelect }) {
   if (!items.length) return null;
@@ -37,7 +37,7 @@ export function TokenBanners({ items, selected, onSelect }) {
         >
           <img src={BANNERS[i % BANNERS.length]} alt="" className="absolute inset-0 h-full w-full object-cover" />
           <span className="absolute left-1/2 top-6 grid h-[90px] w-[90px] -translate-x-1/2 place-items-center rounded-full bg-surface">
-            <TokenAvatar symbol={item.symbol} size="h-[76px] w-[76px]" text="text-xl" />
+            <TokenAvatar symbol={item.symbol} logo={item.logo} size="h-[76px] w-[76px]" text="text-xl" />
           </span>
           <span className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between rounded-md bg-surface px-3.5 py-1.5">
             <span className="font-semibold text-ink">{item.symbol}</span>
