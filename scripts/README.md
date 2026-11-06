@@ -1,6 +1,12 @@
 # scripts
 
-- `arkiv-seed-tokens.ts`: writes the admin-curated token list to Arkiv
-- `arkiv-query.ts`: the runnable query for Arkiv judges
+The Arkiv scripts live in the backend so they reuse its dependencies and schemas:
 
-See [docs/PLAN.md](../docs/PLAN.md) §7.
+- **Runnable query for Arkiv judges** (read-only, no key needed):
+  ```bash
+  cd backend && npm install
+  node scripts/arkiv-query.js              # whole SettleX order book
+  node scripts/arkiv-query.js 0xWallet     # only entities owned by that wallet
+  ```
+  Source: [backend/scripts/arkiv-query.js](../backend/scripts/arkiv-query.js)
+- **Curated token list:** published from the Admin page (Token list section) by the list admin wallet.
