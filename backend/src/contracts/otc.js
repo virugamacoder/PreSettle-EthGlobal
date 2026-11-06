@@ -10,7 +10,16 @@ import { config } from "../config.js";
 export const OTC_ABI = parseAbi([
   "struct Order { address maker; address offerToken; uint256 offerAmount; address wantToken; uint256 wantAmount; uint256 filledOffer; bool partialAllowed; uint64 deadline; address privateTaker; address broker; uint16 brokerFeeBps; bool cancelled; }",
   "function getOrder(uint256 orderId) view returns (Order)",
+  "function expire(uint256 orderId)",
 ]);
+
+/** An order the keeper should expire: past deadline, still open, something left to refund. */
+export function needsExpiry(onchain, nowSec) {
+  if (!onchain || onchain.error) return false;
+  if (onchain.cancelled) return false;
+  if (Number(onchain.deadline) > nowSec) return false;
+  return onchain.offerAmount - onchain.filledOffer > 0n;
+}
 
 /**
  * Reads many orders in one multicall.

@@ -3,6 +3,7 @@ import helmet from "helmet";
 import cors from "cors";
 import { config, features } from "./config.js";
 import { chainStatus, platformAccount } from "./chains.js";
+import { keeperStatus } from "./keeper.js";
 import { ordersRouter } from "./routes/orders.js";
 import { authRouter } from "./routes/auth.js";
 import { adminBrokersRouter, brokersRouter } from "./routes/brokers.js";
@@ -38,7 +39,11 @@ export function createApp() {
   // Live connectivity to Arc, Arkiv and Sepolia.
   app.get("/v1/status", async (req, res, next) => {
     try {
-      res.json({ chains: await chainStatus(), platformAccount: platformAccount?.address ?? null });
+      res.json({
+        chains: await chainStatus(),
+        platformAccount: platformAccount?.address ?? null,
+        keeper: keeperStatus(),
+      });
     } catch (err) {
       next(err);
     }
