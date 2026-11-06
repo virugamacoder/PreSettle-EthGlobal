@@ -49,7 +49,7 @@ The frontend reads the new `orderId` from `OrderCreated` in the transaction rece
 
 ## PremarketMarket
 
-**Units:** `tokenAmount` is the pre-launch token amount with **18 decimals** (the real token doesn't exist before TGE). `pricePerToken` is in collateral-token units (USDC/EURC, 6 decimals) per 1 whole token. Collateral or payment = `tokenAmount * pricePerToken / 1e18` (the app rounds up). One `buy` is one buyer's purchase on one offer; `deliver` sends real tokens to all buyers of that offer.
+**Units:** `tokenAmount` is the pre-launch token amount with **18 decimals** (the real token doesn't exist before TGE). `pricePerToken` is in collateral-token units (USDC/EURC, 6 decimals) per 1 whole token. Collateral or payment = `tokenAmount * pricePerToken / 1e18` (the app rounds up). One `buy` is one buyer's purchase on one offer; `deliver` sends real tokens to all buyers of that offer. `deliver` pulls `sold` from the seller converted to the real token's decimals (`sold * 10^decimals / 1e18`, rounded up); the frontend approves exactly that amount.
 
 | Function | Used by | Purpose |
 |---|---|---|
