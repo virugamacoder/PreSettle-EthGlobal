@@ -10,7 +10,7 @@
 
 ## Status
 
-🚧 In progress. The frontend and backend are live; the smart contracts are being built in Arc Studio. See [docs/CONTRACT_INTERFACE.md](docs/CONTRACT_INTERFACE.md) for what the app expects from them, and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for how everything is deployed.
+🚧 In progress. The frontend, backend and escrow contracts are live on testnet. See [docs/CONTRACT_INTERFACE.md](docs/CONTRACT_INTERFACE.md) for what the app expects from them, and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for how everything is deployed.
 
 ## Prize tracks
 
@@ -40,7 +40,8 @@
 | Backend API | https://3.109.65.92.nip.io/v1 ([health](https://3.109.65.92.nip.io/health)) |
 | Arc Studio project | _TBD_ |
 | Demo video | _TBD_ |
-| Contract addresses (Arc Testnet) | _Pending: deployed from Arc Studio_ |
+| OTCMarket (Arc Testnet) | [`0xB7c66d9136C5D6941467CC5B541b7272328DC17c`](https://explorer.testnet.arc.io/address/0xB7c66d9136C5D6941467CC5B541b7272328DC17c) |
+| PremarketMarket (Arc Testnet) | [`0xB26990f986533AD138F70fc160a698Dd5E35Abf0`](https://explorer.testnet.arc.io/address/0xB26990f986533AD138F70fc160a698Dd5E35Abf0) |
 | Arkiv query judges can run | `cd backend && npm install && node scripts/arkiv-query.js` |
 | Arkiv writer wallets | _TBD_ |
 

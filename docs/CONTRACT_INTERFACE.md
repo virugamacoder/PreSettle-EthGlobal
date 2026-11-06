@@ -2,7 +2,7 @@
 
 For the smart contract developer. These are the functions and events the **frontend, backend and keeper call**. If the contracts match this exactly, the app needs no changes. Extra functions are fine; renamed or reordered ones break the app.
 
-> **Status:** the contracts currently in `contracts/` (`OpenMarket.sol`, `PreMarket.sol`) **don't match this interface**. They're being rebuilt in **Arc Studio**.
+> **Status:** implemented by `OTCMarket` and `PremarketMarket` in `contracts/` and deployed to Arc Testnet: OTCMarket `0xB7c66d9136C5D6941467CC5B541b7272328DC17c`, PremarketMarket `0xB26990f986533AD138F70fc160a698Dd5E35Abf0` (see `contracts/deployments/arc-testnet.json`). Payouts in both contracts are credited to `balances` and claimed with `withdraw(token)`.
 
 **Network:** Arc Testnet, chain **5042002**. **USDC** `0x3600000000000000000000000000000000000000` and **EURC** `0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a` both use **6 decimals** through their ERC-20 interface. Never use `msg.value` (native USDC has 18 decimals).
 

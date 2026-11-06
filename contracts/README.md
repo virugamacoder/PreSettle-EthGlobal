@@ -8,6 +8,8 @@ Solidity escrow contracts for Pre Settle on **Arc Testnet** (chain 5042002).
 | `PremarketMarket` | [contracts/PreMarket.sol](contracts/PreMarket.sol) | Pre-TGE sales with 100% seller collateral: buy, deliver in the window, claim default, reclaim unsold |
 | `TestToken` | [contracts/Mock/TestToken.sol](contracts/Mock/TestToken.sol) | Mintable 18-decimal ERC-20 for tests and the demo "XYZ" token |
 
+**Deployed on Arc Testnet** ([deployments/arc-testnet.json](deployments/arc-testnet.json)): OTCMarket [`0xB7c66d9136C5D6941467CC5B541b7272328DC17c`](https://explorer.testnet.arc.io/address/0xB7c66d9136C5D6941467CC5B541b7272328DC17c), PremarketMarket [`0xB26990f986533AD138F70fc160a698Dd5E35Abf0`](https://explorer.testnet.arc.io/address/0xB26990f986533AD138F70fc160a698Dd5E35Abf0). The deployed bytecode matches this repo's build.
+
 The interface the app relies on is in [docs/CONTRACT_INTERFACE.md](../docs/CONTRACT_INTERFACE.md).
 
 ## Setup

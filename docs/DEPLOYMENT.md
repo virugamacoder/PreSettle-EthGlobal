@@ -6,7 +6,7 @@ One repository, three deploy targets:
 |---|---|---|---|---|
 | Frontend | `frontend/` | **Vercel** | https://presettle-ethglobal.vercel.app | Vercel Git integration, **Root Directory = `frontend`**, on every push to `main` |
 | Backend | `backend/` | **AWS EC2** (Elastic IP `3.109.65.92`) | https://3.109.65.92.nip.io (API: `/v1`) | GitHub Actions → Docker Hub → SSH → Docker Compose, **when `backend/` changes** or by hand |
-| Contracts | `contracts/` | **Arc Testnet** (chain 5042002) | _pending_ | Built and deployed in **Arc Studio**, then pulled into `contracts/` with `arc-studio pull`. No CI |
+| Contracts | `contracts/` | **Arc Testnet** (chain 5042002) | OTCMarket `0xB7c66d9136C5D6941467CC5B541b7272328DC17c`, PremarketMarket `0xB26990f986533AD138F70fc160a698Dd5E35Abf0` | Built and deployed in **Arc Studio**, then pulled into `contracts/` with `arc-studio pull`. No CI |
 
 Repository: https://github.com/virugamacoder/PreSettle-EthGlobal (public, as required for judging).
 
@@ -28,7 +28,7 @@ Repository: https://github.com/virugamacoder/PreSettle-EthGlobal (public, as req
    | `VITE_ARKIV_ADMIN_ADDRESS` | Wallet that publishes the curated token list |
    | `VITE_SEPOLIA_RPC_URL` | Sepolia RPC (ENS) |
    | `VITE_ENS_PARENT_NAME` | `presettle.eth` |
-   | `VITE_OTC_CONTRACT_ARC_TESTNET` / `VITE_PREMARKET_CONTRACT_ARC_TESTNET` | Contract addresses from Arc Studio (empty until deployed) |
+   | `VITE_OTC_CONTRACT_ARC_TESTNET` / `VITE_PREMARKET_CONTRACT_ARC_TESTNET` | `0xB7c66d9136C5D6941467CC5B541b7272328DC17c` / `0xB26990f986533AD138F70fc160a698Dd5E35Abf0` |
 
 5. **Changing a variable needs a redeploy** (Deployments → ⋯ → Redeploy), because Vite builds the values into the bundle.
 
@@ -78,7 +78,7 @@ The workflow writes this secret to `<APP_DIR>/.env` and appends `DOCKER_IMAGE=<u
 | `BASE_URL` | `https://3.109.65.92.nip.io` |
 | `CORS_ORIGINS` | `https://presettle-ethglobal.vercel.app,http://localhost:5173` (full origins, no trailing slash; empty = allow all) |
 | `ARC_RPC_URL` | Arc Testnet RPC |
-| `OTC_CONTRACT` / `PREMARKET_CONTRACT` | Arc Testnet addresses (empty until the contracts are deployed) |
+| `OTC_CONTRACT` / `PREMARKET_CONTRACT` | `0xB7c66d9136C5D6941467CC5B541b7272328DC17c` / `0xB26990f986533AD138F70fc160a698Dd5E35Abf0` |
 | `BROKER_REGISTRY` | Empty (broker feature paused) |
 | `ARKIV_ACCESS_KEY` | Arkiv key (add the server IP to its **IP allowlist** in Arkiv Hub) |
 | `ARKIV_ADMIN_ADDRESS` | Token-list admin wallet |
