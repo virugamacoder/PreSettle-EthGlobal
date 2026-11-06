@@ -19,6 +19,7 @@ Token amounts use the token's own decimals. **USDC and EURC on Arc use 6 decimal
 | `cancel(uint256 orderId)` | frontend dashboard | Maker refunds the unfilled amount |
 | `expire(uint256 orderId)` | backend keeper | Anyone refunds the maker after the deadline |
 | `withdraw(address token)` | frontend dashboard | Pull-payment of proceeds and fees |
+| `balances(address account, address token) view returns (uint256)` | frontend dashboard | Amount waiting to be withdrawn |
 
 Structs and event the app uses today ([backend/src/contracts/otc.js](../backend/src/contracts/otc.js), [frontend/src/contracts/otc.js](../frontend/src/contracts/otc.js)):
 
