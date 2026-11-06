@@ -44,8 +44,8 @@
 
 ## AI usage
 
-- Planning and documentation were drafted with **Claude Code** (Anthropic).
-- Smart contracts are generated, tested and audited with **Arc Studio** (an AI agent), then reviewed by the team.
+- Built with the help of **Claude Code** (Anthropic) as a coding assistant.
+- Smart contracts are written, tested and audited in **Arc Studio** (Circle's AI agent).
 
 ## License
 
