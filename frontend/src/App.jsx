@@ -1,22 +1,34 @@
-import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { useAccount } from "wagmi";
+import { createBrowserRouter, RouterProvider } from "react-router";
+import { Layout } from "./components/Layout.jsx";
+import Premarket from "./pages/Premarket.jsx";
+import Otc from "./pages/Otc.jsx";
+import OtcDetails from "./pages/OtcDetails.jsx";
+import Broker from "./pages/Broker.jsx";
+import Deal from "./pages/Deal.jsx";
+import Dashboard from "./pages/Dashboard.jsx";
+import Create from "./pages/Create.jsx";
+import Admin from "./pages/Admin.jsx";
+import Settings from "./pages/Settings.jsx";
+import NotFound from "./pages/NotFound.jsx";
+
+const router = createBrowserRouter([
+  {
+    element: <Layout />,
+    children: [
+      { index: true, element: <Premarket /> },
+      { path: "otc", element: <Otc /> },
+      { path: "otc/:key", element: <OtcDetails /> },
+      { path: "broker", element: <Broker /> },
+      { path: "deal/:key", element: <Deal /> },
+      { path: "dashboard", element: <Dashboard /> },
+      { path: "create", element: <Create /> },
+      { path: "admin", element: <Admin /> },
+      { path: "settings", element: <Settings /> },
+      { path: "*", element: <NotFound /> },
+    ],
+  },
+]);
 
 export default function App() {
-  const { address, chain } = useAccount();
-
-  return (
-    <main className="mx-auto flex min-h-screen max-w-5xl flex-col justify-center gap-6 px-4">
-      <p className="text-sm font-medium uppercase tracking-widest text-accent">SettleX</p>
-      <h1 className="text-4xl font-semibold leading-tight sm:text-5xl">
-        Trustless OTC and pre-launch trading, settled in USDC on Arc.
-      </h1>
-      <p className="max-w-2xl text-lg text-muted">
-        Escrowed deals on Arc, verified brokers on ENS, and an open order book on Arkiv.
-      </p>
-      <div className="flex flex-wrap items-center gap-4">
-        <ConnectButton />
-        {address && <span className="text-sm text-muted">Network: {chain?.name ?? "unsupported"}</span>}
-      </div>
-    </main>
-  );
+  return <RouterProvider router={router} />;
 }
