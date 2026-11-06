@@ -6,7 +6,7 @@
 - **Brokers** are verified with **ENSv2** names.
 - **The order book** is open, wallet-owned data on **Arkiv**.
 
-> Built at **ETHGlobal Mumbai 2026**. All code in this repository was written during the hackathon.
+> Built at **ETHGlobal Mumbai 2026**. All application code in this repository was written during the hackathon; the only reused files are listed under [Pre-existing work](#pre-existing-work).
 
 ## Status
 
