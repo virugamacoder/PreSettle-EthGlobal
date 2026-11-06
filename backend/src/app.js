@@ -4,6 +4,7 @@ import cors from "cors";
 import { config, features } from "./config.js";
 import { chainStatus, platformAccount } from "./chains.js";
 import { ordersRouter } from "./routes/orders.js";
+import { authRouter } from "./routes/auth.js";
 
 export function createApp() {
   const app = express();
@@ -43,6 +44,7 @@ export function createApp() {
   });
 
   app.use("/v1/orders", ordersRouter);
+  app.use("/v1/auth", authRouter);
 
   app.use((req, res) => {
     res.status(404).json({ status: "fail", message: "Not found" });

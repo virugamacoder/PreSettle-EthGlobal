@@ -41,6 +41,10 @@ const schema = z.object({
   // Platform account (keeper, ENS admin). Testnet-only key.
   PLATFORM_PRIVATE_KEY: optional(privateKey),
   ADMIN_WALLETS: csv(address),
+  // Signs admin session tokens after Sign-In with Ethereum (min 32 chars).
+  AUTH_SECRET: optional(z.string().min(32, "must be at least 32 characters")),
+  // Domain the frontend uses in the SIWE message (e.g. pre-settle.vercel.app)
+  SIWE_DOMAIN: optional(z.string()),
 
   // Keeper (automatic settlement after deadlines)
   KEEPER_ENABLED: z
@@ -89,6 +93,7 @@ export const config = {
   },
   platformPrivateKey: env.PLATFORM_PRIVATE_KEY,
   adminWallets: env.ADMIN_WALLETS.map((a) => a.toLowerCase()),
+  auth: { secret: env.AUTH_SECRET, siweDomain: env.SIWE_DOMAIN },
   keeper: { enabled: env.KEEPER_ENABLED, intervalMs: env.KEEPER_INTERVAL_MS },
   prices: { coinMarketCapKey: env.COINMARKETCAP_API_KEY },
 };
@@ -101,6 +106,7 @@ export const features = {
   ens: Boolean(config.ens.rpcUrl && config.ens.userRegistry),
   ensAdmin: Boolean(config.ens.rpcUrl && config.ens.userRegistry && config.platformPrivateKey),
   keeper: Boolean(config.keeper.enabled && config.platformPrivateKey),
+  adminAuth: Boolean(config.auth.secret && config.adminWallets.length),
   prices: Boolean(config.prices.coinMarketCapKey),
 };
 
