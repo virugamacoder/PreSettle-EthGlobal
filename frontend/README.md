@@ -60,3 +60,4 @@ See [.env.example](.env.example). Everything is public (bundled into the browser
 ## Deploy
 
 Live at **https://presettle-ethglobal.vercel.app**. Vercel with **Root Directory = `frontend`** redeploys on every push to `main`; after changing an environment variable, redeploy so the build picks it up. See [docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md).
+
