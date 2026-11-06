@@ -17,12 +17,20 @@ export const sepoliaPublic = config.ens.rpcUrl
   : null;
 
 // ── Arkiv (Rabdi testnet): order book ───────────────────────────────────────
-// The access key raises rate limits; without it the public endpoint is used.
+// The access key gives a monthly quota; without it the public endpoint has a
+// small per-IP budget and answers 429 ANON_COST_LIMITED once it's used up.
+// No retries: a 429 carries Retry-After (~20 s+) and viem would wait for it.
 export const arkivChain = rabdi({ accessKey: config.arkiv.accessKey ?? "" });
 export const arkivPublic = createArkivPublicClient({
   chain: arkivChain,
-  transport: http(),
+  transport: http(undefined, { timeout: 15_000, retryCount: 0 }),
 });
+
+/** True when Arkiv refused the call because of rate limits / quota. */
+export function isArkivRateLimit(err) {
+  const text = `${err?.status ?? ""} ${err?.message ?? ""} ${err?.details ?? ""} ${err?.cause?.message ?? ""}`;
+  return /\b429\b|COST_LIMITED|rate limit|quota/i.test(text);
+}
 
 // ── Platform account (keeper + ENS admin) ───────────────────────────────────
 export const platformAccount = config.platformPrivateKey

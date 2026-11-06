@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { z } from "zod";
 import { listOrders } from "../services/orders.js";
+import { isArkivRateLimit } from "../chains.js";
+import { httpError } from "../auth.js";
 
 const addressParam = z.string().regex(/^0x[a-fA-F0-9]{40}$/);
 const decimalParam = z.string().regex(/^\d+(\.\d{1,18})?$/);
@@ -29,5 +31,12 @@ ordersRouter.get("/", async (req, res) => {
       issues: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
     });
   }
-  res.json(await listOrders(parsed.data));
+  try {
+    res.json(await listOrders(parsed.data));
+  } catch (err) {
+    if (isArkivRateLimit(err)) {
+      throw httpError(503, "Arkiv query limit reached: set ARKIV_ACCESS_KEY on the backend (hub.arkiv.network)");
+    }
+    throw err;
+  }
 });
