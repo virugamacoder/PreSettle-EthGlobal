@@ -1,35 +1,22 @@
 # Contract interface (what the app expects)
 
-For the smart contract developer. This lists the functions and events the **frontend and backend call**, so the app and the contracts line up. It's a proposal: if the real contracts differ, send the ABI and the app will be adjusted.
+For the smart contract developer. These are the functions and events the **frontend, backend and keeper call**. If the contracts match this exactly, the app needs no changes. Extra functions are fine; renamed or reordered ones break the app.
 
-**Please share when deployed (Arc Testnet, chain 5042002):**
-- ABI JSON for each contract
-- the deployed addresses
-- the Arc Studio project URL (Arc prize requirement)
+> **Status:** the contracts currently in `contracts/` (`OpenMarket.sol`, `PreMarket.sol`) **don't match this interface**. They're being rebuilt in **Arc Studio**.
 
-Token amounts use the token's own decimals. **USDC and EURC on Arc use 6 decimals** through their ERC-20 interface (`0x3600000000000000000000000000000000000000` / `0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a`).
+**Network:** Arc Testnet, chain **5042002**. **USDC** `0x3600000000000000000000000000000000000000` and **EURC** `0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a` both use **6 decimals** through their ERC-20 interface. Never use `msg.value` (native USDC has 18 decimals).
+
+---
 
 ## OTCMarket
-
-| Function | Used by | Purpose |
-|---|---|---|
-| `getOrder(uint256 orderId) view returns (Order)` | backend `/v1/orders`, frontend | Verify Arkiv listings, show remaining amount |
-| `createOrder(CreateParams p) returns (uint256 orderId)` | frontend "Create order" | Lock the offer token, open the order |
-| `fill(uint256 orderId, uint256 offerAmount)` | frontend "Buy/Sell" | Partial or full fill |
-| `cancel(uint256 orderId)` | frontend dashboard | Maker refunds the unfilled amount |
-| `expire(uint256 orderId)` | backend keeper | Anyone refunds the maker after the deadline |
-| `withdraw(address token)` | frontend dashboard | Pull-payment of proceeds and fees |
-| `balances(address account, address token) view returns (uint256)` | frontend dashboard | Amount waiting to be withdrawn |
-
-Structs and event the app uses today ([backend/src/contracts/otc.js](../backend/src/contracts/otc.js), [frontend/src/contracts/otc.js](../frontend/src/contracts/otc.js)):
 
 ```solidity
 struct CreateParams {
   address offerToken; uint256 offerAmount;      // what the maker locks
-  address wantToken;  uint256 wantAmount;       // what the maker wants in total
+  address wantToken;  uint256 wantAmount;       // TOTAL price for the whole offerAmount
   bool partialAllowed; uint64 deadline;         // unix seconds
   address privateTaker;                         // 0x0 = anyone; set for broker deals
-  address broker; uint16 brokerFeeBps;          // 0x0 / 0 when no broker
+  address broker; uint16 brokerFeeBps;          // 0x0 / 0 when no broker (must be allowed)
 }
 
 struct Order {
@@ -39,33 +26,37 @@ struct Order {
   address broker; uint16 brokerFeeBps; bool cancelled;
 }
 
+function createOrder(CreateParams calldata p) external returns (uint256 orderId);
+function getOrder(uint256 orderId) external view returns (Order memory);
+function fill(uint256 orderId, uint256 offerAmount) external;
+function cancel(uint256 orderId) external;
+function expire(uint256 orderId) external;
+function withdraw(address token) external;
+function balances(address account, address token) external view returns (uint256);
+function setPlatformFee(uint16 bps) external;   // owner, max 100
+
 event OrderCreated(uint256 indexed orderId, address indexed maker, address offerToken, address wantToken,
                    uint256 offerAmount, uint256 wantAmount, uint64 deadline, address broker, address privateTaker);
+event OrderFilled(uint256 indexed orderId, address indexed taker, uint256 offerAmount, uint256 wantAmount);
+event OrderCancelled(uint256 indexed orderId);
+event OrderExpired(uint256 indexed orderId);
+event Withdrawn(address indexed account, address indexed token, uint256 amount);
 ```
 
-The frontend reads the new `orderId` from `OrderCreated` in the transaction receipt, so the **event signature must match exactly** (or send the ABI and the app is updated). Also emit `OrderFilled`, `OrderCancelled`, `OrderExpired`.
+| Function | Used by | Behaviour the app relies on |
+|---|---|---|
+| `createOrder` | frontend "Create order" | `maker = msg.sender`; pulls `offerAmount`; requires `deadline > now`, `brokerFeeBps ≤ 200`; **emits `OrderCreated` with the id** (the frontend reads it from the receipt) |
+| `getOrder` | backend `/v1/orders`, keeper, frontend | A listing is shown only if `maker` = the Arkiv owner, `!cancelled`, `deadline > now` and `offerAmount − filledOffer > 0` |
+| `fill(id, x)` | frontend "Buy/Sell" | Before the deadline; respects `privateTaker` and `partialAllowed`. The **contract computes the price**: `pay = ceil(x · wantAmount / offerAmount)`. Platform fee, broker fee and maker share are **credited** to `balances`; the taker receives `x` |
+| `cancel(id)` | frontend (maker) | Sets `cancelled = true` and credits the unfilled amount to the maker's balance |
+| `expire(id)` | backend keeper | **Anyone**, at or after the deadline. Sets `cancelled = true` (so the keeper doesn't retry) and credits the unfilled amount to the **maker** |
+| `withdraw` / `balances` | frontend dashboard | Pull-payment of proceeds, fees and refunds |
 
-`fill(orderId, offerAmount)`: `offerAmount` is how much of the maker's offered token the taker takes; the contract pulls the pro-rata `wantAmount` from the taker.
+---
 
 ## PremarketMarket
 
-**Units:** `tokenAmount` is the pre-launch token amount with **18 decimals** (the real token doesn't exist before TGE). `pricePerToken` is in collateral-token units (USDC/EURC, 6 decimals) per 1 whole token. Collateral or payment = `tokenAmount * pricePerToken / 1e18` (the app rounds up). One `buy` is one buyer's purchase on one offer; `deliver` sends real tokens to all buyers of that offer. `deliver` pulls `sold` from the seller converted to the real token's decimals (`sold * 10^decimals / 1e18`, rounded up); the frontend approves exactly that amount.
-
-| Function | Used by | Purpose |
-|---|---|---|
-| `marketCount() view returns (uint256)` | frontend | Number of markets (ids 0..n-1) |
-| `getMarket(uint256 marketId) view returns (Market)` | frontend | Symbol, TGE time, delivery window, real token |
-| `getOffer(uint256 offerId) view returns (Offer)` | backend, frontend | Offer state for display and verification |
-| `purchases(uint256 offerId, address buyer) view returns (uint256)` | frontend | How much a buyer bought (18-dec) |
-| `createOffer(uint256 marketId, address collateralToken, uint256 tokenAmount, uint256 pricePerToken) returns (uint256 offerId)` | frontend | Seller locks 100% collateral |
-| `buy(uint256 offerId, uint256 tokenAmount)` | frontend | Buyer pays before TGE |
-| `deliver(uint256 offerId)` | frontend | Seller delivers real tokens in [TGE, TGE + deliveryWindow) |
-| `claimDefault(uint256 offerId)` | frontend, backend keeper | After the window: buyers get payment + pro-rata seller collateral |
-| `cancelOffer(uint256 offerId)` | frontend | Seller cancels when nothing is sold |
-| `reclaimUnsold(uint256 offerId)` | frontend | Seller reclaims collateral for the unsold part after TGE |
-| `createMarket(string symbol, uint64 tge, uint64 deliveryWindow) returns (uint256)` | frontend admin | New market |
-| `setRealToken(uint256 marketId, address token)` | frontend admin | Set the real token at TGE |
-| `raiseDispute` / `resolveDispute` | frontend | Dispute flow (arbiter), signatures TBD |
+**Units:** `tokenAmount`, `sold` and `purchases` use **18 decimals** (the real token doesn't exist before TGE). `pricePerToken` is in collateral units (USDC/EURC, 6 decimals) per 1 whole token. Payment and collateral = `ceil(tokenAmount · pricePerToken / 1e18)`. At delivery the seller sends `ceil(sold · 10^realDecimals / 1e18)` of the real token; the frontend approves exactly that.
 
 ```solidity
 struct Market { string symbol; uint64 tge; uint64 deliveryWindow; address realToken; bool active; }
@@ -74,16 +65,48 @@ struct Offer {
   uint256 tokenAmount; uint256 pricePerToken; uint256 sellerCollateral;
   uint256 sold; uint8 status;   // 0 Open, 1 Delivered, 2 Defaulted, 3 Cancelled, 4 Disputed, 5 Voided
 }
+
+function marketCount() external view returns (uint256);
+function getMarket(uint256 marketId) external view returns (Market memory);
+function getOffer(uint256 offerId) external view returns (Offer memory);
+function purchases(uint256 offerId, address buyer) external view returns (uint256);
+function createMarket(string calldata symbol, uint64 tge, uint64 deliveryWindow) external returns (uint256 marketId);
+function setRealToken(uint256 marketId, address token) external;
+function createOffer(uint256 marketId, address collateralToken, uint256 tokenAmount, uint256 pricePerToken)
+    external returns (uint256 offerId);
+function buy(uint256 offerId, uint256 tokenAmount) external;
+function deliver(uint256 offerId) external;
+function claimDefault(uint256 offerId) external;
+function cancelOffer(uint256 offerId) external;
+function reclaimUnsold(uint256 offerId) external;
+
 event OfferCreated(uint256 indexed offerId, uint256 indexed marketId, address indexed seller,
                    address collateralToken, uint256 tokenAmount, uint256 pricePerToken);
 event Purchased(uint256 indexed offerId, address indexed buyer, uint256 tokenAmount, uint256 paid);
+// also: MarketCreated, RealTokenSet, Delivered, Defaulted, OfferCancelled, UnsoldReclaimed
 ```
 
-The frontend reads the new `offerId` from `OfferCreated` in the receipt, so the event signature must match (or send the ABI). Frontend copy: [frontend/src/contracts/premarket.js](../frontend/src/contracts/premarket.js).
-
-## BrokerRegistry (optional)
-
-| Function | Used by | Purpose |
+| Function | Who / when | Behaviour |
 |---|---|---|
-| `setBroker(address broker, uint64 expiry)` | backend (ENS → Arc sync) | Mirror a broker's ENS license on Arc |
-| `isActiveBroker(address) view returns (bool)` | OTCMarket, frontend | Block deals by revoked or expired brokers |
+| `createMarket`, `setRealToken` | owner | New market (`tge > now`); real token set at or after TGE. TGE can't change once a market has offers |
+| `createOffer` | seller, before TGE | Pulls **100% collateral** (`sellerCollateral`), computed on-chain; USDC/EURC only |
+| `buy(id, n)` | buyer, before TGE | Contract computes `paid`; `sold += n`; at most 50 buyers per offer |
+| `deliver(id)` | seller, `TGE ≤ now < TGE + window` | Status → Delivered **first**, then real tokens to every buyer; seller gets payments − platform fee + collateral for the sold part |
+| `claimDefault(id)` | **anyone**, `now ≥ TGE + window` | Status → Defaulted **first**; each buyer gets their payment + pro-rata collateral |
+| `cancelOffer(id)` | seller, before TGE, `sold == 0` | Refunds all collateral |
+| `reclaimUnsold(id)` | seller, after TGE, once | Refunds collateral for the unsold part only |
+
+Every settlement function can succeed **only once**.
+
+Optional (Arc prize): a reusable `ConditionalEscrow` with `raiseDispute` / `resolveDispute` (separate arbiter role) and a default ruling after a timeout. VOID refunds everyone.
+
+## BrokerRegistry (paused)
+Not needed for now (the broker feature is hidden). `OTCMarket` must accept `broker = 0x0`.
+
+---
+
+## Deliverables (please share when deployed)
+- Arc Studio **project URL** (Arc prize requirement)
+- `contracts/deployments/arc-testnet.json`: addresses, tx hashes, deploy block
+- ABI JSON for each contract in `contracts/abi/`
+- Owner setup done: platform fee, collateral allow-list, a demo market (TGE about 10 minutes out, 3–5 minute delivery window)

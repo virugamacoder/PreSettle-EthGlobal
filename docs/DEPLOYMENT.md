@@ -1,118 +1,133 @@
-# Deployment: pre-settle-eth-global
+# Deployment: Pre Settle
 
 One repository, three deploy targets:
 
-| Part | Folder | Where it runs | How it deploys |
-|---|---|---|---|
-| Frontend | `frontend/` | **Vercel** | Vercel Git integration, **Root Directory = `frontend`** |
-| Backend | `backend/` | **AWS EC2** (the existing Pre Settle server) | GitHub Actions → Docker Hub → SSH → Docker Compose, **only when `backend/` changes** |
-| Contracts | `contracts/` | **Arc Testnet** | Deployed from **Arc Studio**, then pulled into `contracts/` with `arc-studio pull`. No CI. |
+| Part | Folder | Where it runs | Live URL | How it deploys |
+|---|---|---|---|---|
+| Frontend | `frontend/` | **Vercel** | https://presettle-ethglobal.vercel.app | Vercel Git integration, **Root Directory = `frontend`**, on every push to `main` |
+| Backend | `backend/` | **AWS EC2** (Elastic IP `3.109.65.92`) | https://3.109.65.92.nip.io (API: `/v1`) | GitHub Actions → Docker Hub → SSH → Docker Compose, **when `backend/` changes** or by hand |
+| Contracts | `contracts/` | **Arc Testnet** (chain 5042002) | _pending_ | Built and deployed in **Arc Studio**, then pulled into `contracts/` with `arc-studio pull`. No CI |
+
+Repository: https://github.com/virugamacoder/PreSettle-EthGlobal (public, as required for judging).
 
 ---
 
-## 1. Push the repo to GitHub
+## 1. Frontend on Vercel
 
-```bash
-gh repo create pre-settle-eth-global --public --source . --push
-# or create it on github.com, then:
-git remote add origin https://github.com/<you>/pre-settle-eth-global.git
-git push -u origin main
-```
-
-The repo must be **public** for judging.
-
----
-
-## 2. Frontend on Vercel
-
-1. vercel.com → **Add New → Project** → import `pre-settle-eth-global`
-2. **Root Directory: `frontend`**. This is the key setting for a single repo.
-3. Framework preset: **Vite** (build `vite build`, output `dist`)
-4. Environment variables (full list in `frontend/.env.example`):
+1. vercel.com → **Add New → Project** → import `virugamacoder/PreSettle-EthGlobal`. The first time, install the Vercel GitHub app on the `virugamacoder` account.
+2. **Root Directory: `frontend`**.
+3. Framework preset **Vite** (build `vite build`, output `dist`). `frontend/vercel.json` already rewrites every route to `index.html`, so refreshing `/otc` works.
+4. **Environment variables.** Every `VITE_` value is built into the public site, so never put private keys here:
 
    | Key | Value |
    |---|---|
-   | `VITE_BASE_URL` | `https://13.207.134.130.nip.io/v1` (same backend URL as before) |
-   | `VITE_WALLETCONNECT_PROJECT_ID` | from cloud.reown.com |
-   | `VITE_ARKIV_ACCESS_KEY` | from hub.arkiv.network (add the Vercel domain to the key's **Origins**) |
-   | `VITE_OTC_CONTRACT_ARC_TESTNET`, `VITE_PREMARKET_CONTRACT_ARC_TESTNET`, … | contract addresses from Arc Studio |
+   | `VITE_BASE_URL` | `https://3.109.65.92.nip.io/v1` |
+   | `VITE_WALLETCONNECT_PROJECT_ID` | From cloud.reown.com (add the Vercel domain to the project's allowed domains) |
+   | `VITE_ARC_TESTNET_RPC_URL` | An Arc Testnet RPC (Infura or `https://rpc.testnet.arc.io`) |
+   | `VITE_ARKIV_ACCESS_KEY` | From hub.arkiv.network (add `https://presettle-ethglobal.vercel.app` to the key's **Origins**) |
+   | `VITE_ARKIV_ADMIN_ADDRESS` | Wallet that publishes the curated token list |
    | `VITE_SEPOLIA_RPC_URL` | Sepolia RPC (ENS) |
-   | `VITE_ARKIV_ADMIN_ADDRESS` | wallet that publishes the curated token list |
-   | `VITE_ENS_PARENT_NAME` | `presettle.eth` (or the parent name you registered) |
-   | `VITE_ARC_TESTNET_RPC_URL` | optional, defaults to `https://rpc.testnet.arc.io` |
+   | `VITE_ENS_PARENT_NAME` | `presettle.eth` |
+   | `VITE_OTC_CONTRACT_ARC_TESTNET` / `VITE_PREMARKET_CONTRACT_ARC_TESTNET` | Contract addresses from Arc Studio (empty until deployed) |
 
-5. Add `frontend/vercel.json` so page refreshes don't return 404:
-   ```json
-   { "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] }
-   ```
-6. Optional: skip frontend builds when only other folders change. Vercel → Settings → Git → **Ignored Build Step**:
-   ```bash
-   git diff HEAD^ HEAD --quiet -- .
-   ```
-   (This runs inside the Root Directory, so `.` means `frontend/`.)
-7. If an old Pre Settle Vercel project exists, delete it (or remove its domain) once the new one is live.
+5. **Changing a variable needs a redeploy** (Deployments → ⋯ → Redeploy), because Vite builds the values into the bundle.
 
 ---
 
-## 3. Backend on the existing AWS server (replacing the old Pre Settle backend)
+## 2. Backend on AWS EC2
 
-### How the swap works
-The new workflow deploys into the **same EC2 server, same `APP_DIR`, same nginx and HTTPS certificate**. Docker Compose sees the same project and replaces the old `app` container with the new image. The URL stays `https://13.207.134.130.nip.io`.
+### 2.1 Server
+| Item | Value |
+|---|---|
+| Instance | Ubuntu, t3.small, Elastic IP **`3.109.65.92`** |
+| Security group | Inbound **22** (SSH; GitHub Actions needs it open), **80** and **443** |
+| SSH | `ssh -i presettle-key.pem ubuntu@3.109.65.92` (key from the EC2 launch, kept privately, never committed) |
+| App folder (`APP_DIR`) | `/home/ubuntu/presettle` |
+| Runs | Docker Compose services `app` (Node, port 3000) and `nginx` (HTTPS on 443, redirect on 80) |
+| HTTPS | Let's Encrypt certificate for `3.109.65.92.nip.io`, issued and renewed by the deploy workflow (no certificate secrets needed) |
 
-### 3.1 Before the first deploy
-1. **Turn off the old repo's workflow** so it can't redeploy the old backend:
-   GitHub → old `SettleX-backend` repo → **Settings → Actions → General → Disable actions**.
-2. Already in this repo: the backend listens on port **3000** with **`GET /health`**; `backend/Dockerfile`, `backend/docker-compose.yml` (services `app` + `nginx`) and `backend/nginx/nginx.conf` (HTTPS with `nginx/certs/cert.pem` + `private.key`) are what the workflow deploys.
-3. Use the **same `APP_DIR`** as the old backend. Docker Compose names the project after that folder, so the new `app` and `nginx` containers replace the old ones on ports 80/443.
+**One-time setup on a fresh server** (already done on the current one):
+```bash
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker ubuntu
+mkdir -p ~/presettle/nginx/certs
+```
 
-### 3.2 GitHub secrets (new repo → Settings → Secrets and variables → Actions)
-Secret values can't be copied from the old repo; enter them again.
-
-**Same as the old backend (server, Docker Hub, certificate):**
+### 2.2 GitHub secrets
+Repo → **Settings → Secrets and variables → Actions**:
 
 | Secret | Value |
 |---|---|
-| `DOCKER_HUB_USERNAME` / `DOCKER_HUB_TOKEN` | Docker Hub login and access token |
-| `SERVER_HOST` | `13.207.134.130` |
+| `SERVER_HOST` | `3.109.65.92` (IP only; the workflow adds `.nip.io`) |
 | `SERVER_USER` | `ubuntu` |
-| `SERVER_SSH_KEY` | full content of `settlex-key.pem` |
 | `SERVER_PORT` | `22` |
-| `APP_DIR` | **same path as the old backend** (e.g. `/home/ubuntu/settlex`) so it replaces it in place |
-| `CERTBOT_EMAIL` | your email |
+| `SERVER_SSH_KEY` | Full content of the EC2 `.pem` key, including the `BEGIN`/`END` lines |
+| `APP_DIR` | `/home/ubuntu/presettle` |
+| `DOCKER_HUB_USERNAME` | Docker Hub user (image: `<user>/pre-settle-backend`) |
+| `DOCKER_HUB_TOKEN` | Docker Hub personal access token, **Read & Write** |
+| `CERTBOT_EMAIL` | Email for Let's Encrypt |
+| `BACKEND_ENV_FILE` | **The whole backend `.env`** (multi-line), see 2.3 |
 
-**The app's settings: one secret holding the whole `.env`:**
+### 2.3 `BACKEND_ENV_FILE`
+The workflow writes this secret to `<APP_DIR>/.env` and appends `DOCKER_IMAGE=<user>/pre-settle-backend:latest`. **If this secret is empty, the backend still starts, but prices, ENS and admin login are off.** Follow `backend/.env.example`:
 
-| Secret | Value |
+| Variable | Production value / note |
 |---|---|
-| `BACKEND_ENV_FILE` | Paste the full content of the backend `.env` (multi-line), following `backend/.env.example` |
+| `NODE_ENV` | `production` |
+| `PORT` | `3000` |
+| `BASE_URL` | `https://3.109.65.92.nip.io` |
+| `CORS_ORIGINS` | `https://presettle-ethglobal.vercel.app,http://localhost:5173` (full origins, no trailing slash; empty = allow all) |
+| `ARC_RPC_URL` | Arc Testnet RPC |
+| `OTC_CONTRACT` / `PREMARKET_CONTRACT` | Arc Testnet addresses (empty until the contracts are deployed) |
+| `BROKER_REGISTRY` | Empty (broker feature paused) |
+| `ARKIV_ACCESS_KEY` | Arkiv key (add the server IP to its **IP allowlist** in Arkiv Hub) |
+| `ARKIV_ADMIN_ADDRESS` | Token-list admin wallet |
+| `SEPOLIA_RPC_URL`, `ENS_PARENT_NAME`, `ENS_USER_REGISTRY` | ENS (registry empty until the ENS setup runs) |
+| `PLATFORM_PRIVATE_KEY` | **Testnet-only** robot wallet for the keeper (needs Arc Testnet USDC for gas). Never the admin wallet's key |
+| `ADMIN_WALLETS` | Admin wallet address(es), comma-separated |
+| `AUTH_SECRET` | 64 random hex characters (`openssl rand -hex 32`) |
+| `SIWE_DOMAIN` | `presettle-ethglobal.vercel.app` (domain only: no `https://`, no `/`) |
+| `KEEPER_ENABLED` / `KEEPER_INTERVAL_MS` | `false` until the contracts are live / `30000` |
+| `COINMARKETCAP_API_KEY` | Reference prices |
 
-The workflow writes this secret to `<APP_DIR>/.env` on the server and appends `DOCKER_IMAGE=<user>/pre-settle-backend:latest`. To add or change a variable, edit this one secret; the workflow doesn't change. Include `COINMARKETCAP_API_KEY=...` if you want reference prices on order pages. Remember to lock the Arkiv access key to the server IP (Arkiv Hub → **IP allowlist**) and use **testnet-only** private keys.
+### 2.4 Workflow
+[`.github/workflows/deploy-backend.yml`](../.github/workflows/deploy-backend.yml):
 
-### 3.3 Workflow file
-The workflow is in the repo: [`.github/workflows/deploy-backend.yml`](../.github/workflows/deploy-backend.yml).
-
-- Runs on push to `main` when `backend/**` changes, or manually (**Actions → Deploy Backend → Run workflow**).
+- **Triggers:** push to `main` that changes `backend/**` or the workflow file, or by hand: **Actions → Deploy Backend → Run workflow**. Pushes that only touch `frontend/`, `contracts/` or docs don't deploy the backend.
 - **Build:** Docker image from `./backend`, pushed as `<DOCKER_HUB_USERNAME>/pre-settle-backend:latest` and `:sha-…`.
-- **Deploy:** writes `.env` from `BACKEND_ENV_FILE`, makes sure the Let's Encrypt certificate for `<SERVER_HOST>.nip.io` exists (skipped if still valid), copies `backend/docker-compose.yml` + `backend/nginx/nginx.conf` to `APP_DIR`, then `docker compose up -d`. This replaces the old Pre Settle container in place.
-- **Health check:** waits for `https://<SERVER_HOST>.nip.io/health` to return `{"status":"ok"}`.
+- **Deploy:** writes `.env` from `BACKEND_ENV_FILE`, makes sure the Let's Encrypt certificate exists (skipped while it's valid for 7+ more days), copies `backend/docker-compose.yml` + `backend/nginx/nginx.conf` to `APP_DIR`, then `docker compose up -d`.
+- **Health check:** waits for `https://3.109.65.92.nip.io/health`. On failure it prints the last 50 lines of the app log.
 
-### 3.4 Check it worked
-- `https://13.207.134.130.nip.io/health` returns `{"status":"ok"}`
-- On the server: `cd <APP_DIR> && docker compose ps` shows the `pre-settle-backend` image
-- Rollback: re-enable the old repo's workflow and re-run its last successful deploy
+**After changing `BACKEND_ENV_FILE`, run the workflow by hand.**
+
+### 2.5 Check it worked
+- `https://3.109.65.92.nip.io/health` → `{"status":"ok","service":"pre-settle-backend",…}`
+- `https://3.109.65.92.nip.io/v1/status` → Arc and Arkiv `ok: true`
+- On the server: `cd ~/presettle && docker compose ps` shows `presettle-app-1` (healthy) and `presettle-nginx-1`
+- Logs: `cd ~/presettle && docker compose logs --tail=100 app`
 
 ---
 
-## 4. Contracts (Arc Testnet)
-- Build, test and deploy in **Arc Studio** (https://studio.arc.io). One-click deploy to Arc Testnet.
+## 3. Contracts (Arc Testnet)
+
+- Built, tested, audited and deployed in **Arc Studio** (https://studio.arc.io), matching [CONTRACT_INTERFACE.md](CONTRACT_INTERFACE.md).
 - `arc-studio pull` brings the code into `contracts/`. Commit it.
-- Put the deployed addresses in `contracts/deployments/arc-testnet.json`, the Vercel env vars and the backend secrets.
+- Record addresses in `contracts/deployments/arc-testnet.json` and ABIs in `contracts/abi/`.
+- Then set the addresses in **Vercel** (`VITE_OTC_CONTRACT_ARC_TESTNET`, `VITE_PREMARKET_CONTRACT_ARC_TESTNET`, then redeploy) and in **`BACKEND_ENV_FILE`** (`OTC_CONTRACT`, `PREMARKET_CONTRACT`, then run the workflow). Finally fund the keeper wallet with Arc Testnet USDC and set `KEEPER_ENABLED=true`.
 
 ---
 
-## Alternative: three separate repos
-If you'd rather have `pre-settle-eth-global-frontend`, `-backend` and `-contract`:
-- **Frontend repo** → Vercel exactly as above, but Root Directory is the repo root.
-- **Backend repo** → the old workflow works unchanged (context `.`); only rename the image and update the `.env` keys.
-- **Contract repo** → Arc Studio pull target.
-- For submission: give judges **one main link** (e.g. the frontend repo) whose README links the other two and holds `/arkiv/*.md`, the Arc Studio URL and the contract addresses.
+## 4. External services checklist
+
+| Service | Setting |
+|---|---|
+| Arkiv Hub (access key) | Origins: `https://presettle-ethglobal.vercel.app`, `http://localhost:5173` · IP allowlist: `3.109.65.92` |
+| Reown / WalletConnect | Allowed domain: `presettle-ethglobal.vercel.app` |
+| Infura | If the key is restricted by origin, use a separate unrestricted key for the backend (server calls have no browser origin) |
+| Circle faucet | Arc Testnet USDC for test wallets and the keeper wallet |
+
+---
+
+## 5. Retired
+
+The previous SettleX backend server (`13.207.134.130`) isn't used by Pre Settle. Stop it in EC2 once nothing depends on it.

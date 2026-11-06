@@ -10,7 +10,7 @@
 
 ## Status
 
-🚧 In progress. Backend and frontend are built; the smart contracts are being built in Arc Studio. See [docs/CONTRACT_INTERFACE.md](docs/CONTRACT_INTERFACE.md) for what the app expects from them.
+🚧 In progress. The frontend and backend are live; the smart contracts are being built in Arc Studio. See [docs/CONTRACT_INTERFACE.md](docs/CONTRACT_INTERFACE.md) for what the app expects from them, and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for how everything is deployed.
 
 ## Prize tracks
 
@@ -36,11 +36,13 @@
 
 | | |
 |---|---|
-| Live demo | _TBD_ |
+| Live demo | https://presettle-ethglobal.vercel.app |
+| Backend API | https://3.109.65.92.nip.io/v1 ([health](https://3.109.65.92.nip.io/health)) |
 | Arc Studio project | _TBD_ |
 | Demo video | _TBD_ |
-| Contract addresses (Arc Testnet) | _TBD_ |
-| Arkiv writer wallets + query | _TBD_ |
+| Contract addresses (Arc Testnet) | _Pending: deployed from Arc Studio_ |
+| Arkiv query judges can run | `cd backend && npm install && node scripts/arkiv-query.js` |
+| Arkiv writer wallets | _TBD_ |
 
 ## AI usage
 
