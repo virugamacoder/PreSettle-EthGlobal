@@ -6,7 +6,7 @@
 - **Brokers** are verified with **ENSv2** names.
 - **The order book** is open, wallet-owned data on **Arkiv**.
 
-> Built at **ETHGlobal Mumbai 2026**. All code in this repository was written during the hackathon (see [Pre-existing work](#pre-existing-work)).
+> Built at **ETHGlobal Mumbai 2026**.
 
 ## Status
 
@@ -41,10 +41,6 @@
 | Demo video | _TBD_ |
 | Contract addresses (Arc Testnet) | _TBD_ |
 | Arkiv writer wallets + query | _TBD_ |
-
-## Pre-existing work
-
-The team built an earlier, separate product called SettleX before this event. Its code is **not** included here; it was used only as a reference for the product idea and business rules. The new backend is deployed to the same AWS server the team already had.
 
 ## AI usage
 
