@@ -16,9 +16,15 @@ export async function switchAndWait(config, chainId, timeoutMs = 20_000) {
   await switchChain(config, { chainId });
   const { connector } = getAccount(config);
   if (!connector?.getChainId) return;
+  // Done only when the wallet AND wagmi's connection agree, twice in a row
+  // (MetaMask can report the new chain and then briefly the old one again).
   const start = Date.now();
+  let agreed = 0;
   while (Date.now() - start < timeoutMs) {
-    if ((await connector.getChainId()) === chainId) return;
+    const walletChain = await connector.getChainId();
+    const appChain = getAccount(config).chainId;
+    agreed = walletChain === chainId && appChain === chainId ? agreed + 1 : 0;
+    if (agreed >= 2) return;
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
   throw new Error(`Your wallet didn't switch to ${NAMES[chainId] ?? `chain ${chainId}`}. Switch it with the network button in the header, then try again.`);
