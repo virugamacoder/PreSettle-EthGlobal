@@ -3,6 +3,7 @@ import { arkivExplorer } from "../arkiv/client.js";
 import { formatAmount, shortAddress, timeLeft } from "../lib/format.js";
 import { tokenLabel } from "../hooks/useTokens.js";
 import { orientation } from "../contracts/otc.js";
+import { BrokerBadge } from "./BrokerBadge.jsx";
 
 export function Pill({ tone = "muted", children }) {
   const tones = {
@@ -75,7 +76,7 @@ export function OrderList({ orders, byAddress }) {
                 <td className="px-4 py-3">{o.partial ? <Pill>Partial</Pill> : <Pill tone="warn">Full</Pill>}</td>
                 <td className="px-4 py-3">
                   <span title={o.maker}>{o.makerEns || shortAddress(o.maker)}</span>
-                  {o.brokerEns && <div className="text-xs text-accent">via {o.brokerEns}</div>}
+                  {o.brokerEns && <div>via <BrokerBadge name={o.brokerEns} address={o.broker} /></div>}
                 </td>
                 <td className="num px-4 py-3 text-muted">{timeLeft(o.deadline)}</td>
                 <td className="px-4 py-3 text-right">
