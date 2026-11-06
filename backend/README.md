@@ -62,3 +62,5 @@ The contract functions the backend calls are listed in [docs/CONTRACT_INTERFACE.
 ## Deployment
 
 The Docker image is built from this folder; `docker-compose.yml` + `nginx/nginx.conf` run it behind HTTPS on the EC2 server. Deploys run automatically on push to `main` when `backend/**` changes ([.github/workflows/deploy-backend.yml](../.github/workflows/deploy-backend.yml)).
+
+
