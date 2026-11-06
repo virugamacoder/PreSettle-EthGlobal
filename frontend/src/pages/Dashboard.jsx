@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { formatUnits } from "viem";
+import { erc20Abi, formatUnits, zeroAddress } from "viem";
 import { useAccount, useConfig, useReadContracts } from "wagmi";
 import { switchChain, waitForTransactionReceipt, writeContract } from "wagmi/actions";
 import { PageHeader, EmptyState, Panel, PillTabs } from "../components/PageHeader.jsx";
@@ -11,6 +11,8 @@ import { errorMessage } from "../components/TxSteps.jsx";
 import { useMyFills, useMyOrders } from "../hooks/useMyActivity.js";
 import { useTokens } from "../hooks/useTokens.js";
 import { OTC_ABI } from "../contracts/otc.js";
+import { PREMARKET_ABI } from "../contracts/premarket.js";
+import { useMarkets } from "../hooks/usePremarket.js";
 import { arkivExplorer } from "../arkiv/client.js";
 import { arcTestnet } from "../config/wagmi.js";
 import { settings } from "../config/env.js";
@@ -44,53 +46,83 @@ function Fills({ address }) {
   );
 }
 
+// Both escrow contracts credit payouts (proceeds, refunds, delivered tokens,
+// fees) to balances(account, token); the owner withdraws them per token.
+const ESCROWS = [
+  { name: "OTC", address: settings.arc.otc, abi: OTC_ABI },
+  { name: "Premarket", address: settings.arc.premarket, abi: PREMARKET_ABI },
+].filter((e) => e.address);
+
 function Balances({ address }) {
   const config = useConfig();
   const { tokens } = useTokens();
+  const { markets } = useMarkets();
   const [status, setStatus] = useState({});
+
+  // Premarket real tokens may not be on the curated list yet: add them with their decimals.
+  const known = new Set(tokens.map((t) => t.address.toLowerCase()));
+  const extra = markets.filter((m) => m.realToken && m.realToken !== zeroAddress && !known.has(m.realToken.toLowerCase()));
+  const extraDecimals = useReadContracts({
+    contracts: extra.map((m) => ({ chainId: arcTestnet.id, address: m.realToken, abi: erc20Abi, functionName: "decimals" })),
+    query: { enabled: extra.length > 0 },
+  });
+  const allTokens = [
+    ...tokens,
+    ...extra.map((m, i) => ({ address: m.realToken, symbol: m.symbol, decimals: Number(extraDecimals.data?.[i]?.result ?? 18) })),
+  ];
+
+  const pairs = ESCROWS.flatMap((escrow) => allTokens.map((token) => ({ escrow, token })));
   const { data, refetch, isLoading } = useReadContracts({
-    contracts: tokens.map((t) => ({
-      chainId: arcTestnet.id, address: settings.arc.otc, abi: OTC_ABI, functionName: "balances", args: [address, t.address],
+    contracts: pairs.map(({ escrow, token }) => ({
+      chainId: arcTestnet.id, address: escrow.address, abi: escrow.abi, functionName: "balances", args: [address, token.address],
     })),
-    query: { enabled: Boolean(settings.arc.otc && address) },
+    query: { enabled: Boolean(address && pairs.length) },
   });
 
-  if (!settings.arc.otc) return <EmptyState title="The OTC contract isn't configured yet" />;
+  if (!ESCROWS.length) return <EmptyState title="The escrow contracts aren't configured yet" />;
   if (isLoading) return <EmptyState title="Loading balances…" />;
 
-  async function withdraw(token) {
-    setStatus((s) => ({ ...s, [token]: "pending" }));
+  async function withdraw({ escrow, token }) {
+    const id = escrow.name + token.address;
+    setStatus((s) => ({ ...s, [id]: "pending" }));
     try {
       await switchChain(config, { chainId: arcTestnet.id });
       const hash = await writeContract(config, {
-        chainId: arcTestnet.id, address: settings.arc.otc, abi: OTC_ABI, functionName: "withdraw", args: [token],
+        chainId: arcTestnet.id, address: escrow.address, abi: escrow.abi, functionName: "withdraw", args: [token.address],
       });
       await waitForTransactionReceipt(config, { chainId: arcTestnet.id, hash });
-      setStatus((s) => ({ ...s, [token]: "done" }));
+      setStatus((s) => ({ ...s, [id]: "done" }));
       refetch();
     } catch (err) {
-      setStatus((s) => ({ ...s, [token]: errorMessage(err) }));
+      setStatus((s) => ({ ...s, [id]: errorMessage(err) }));
     }
   }
 
-  const rows = tokens
-    .map((t, i) => ({ ...t, amount: data?.[i]?.status === "success" ? data[i].result : 0n }))
-    .filter((t) => t.amount > 0n);
+  const rows = pairs
+    .map((p, i) => ({ ...p, id: p.escrow.name + p.token.address, amount: data?.[i]?.status === "success" ? data[i].result : 0n }))
+    .filter((r) => r.amount > 0n);
 
-  if (!rows.length) return <EmptyState title="Nothing to withdraw">Proceeds, refunds and broker fees appear here.</EmptyState>;
+  if (!rows.length) {
+    return (
+      <EmptyState title="Nothing to withdraw">
+        Proceeds, refunds, delivered premarket tokens and broker fees are credited here first. You withdraw them to your wallet.
+      </EmptyState>
+    );
+  }
   return (
     <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface">
-      {rows.map((t) => (
-        <li key={t.address} className="flex items-center gap-4 px-4 py-3 text-sm">
-          <span className="font-medium">{t.symbol}</span>
-          <span className="num">{formatAmount(formatUnits(t.amount, t.decimals))}</span>
-          <span className="ml-auto text-xs text-muted">{status[t.address] && status[t.address] !== "pending" && status[t.address]}</span>
+      {rows.map((r) => (
+        <li key={r.id} className="flex items-center gap-4 px-4 py-3 text-sm">
+          <span className="font-medium">{r.token.symbol}</span>
+          <span className="num">{formatAmount(formatUnits(r.amount, r.token.decimals))}</span>
+          <span className="rounded-full border border-line px-2 py-0.5 text-xs text-muted">{r.escrow.name}</span>
+          <span className="ml-auto text-xs text-muted">{status[r.id] && status[r.id] !== "pending" && status[r.id]}</span>
           <button
-            onClick={() => withdraw(t.address)}
-            disabled={status[t.address] === "pending"}
+            onClick={() => withdraw(r)}
+            disabled={status[r.id] === "pending"}
             className="rounded-full bg-brand-gradient px-3 py-1.5 text-xs font-semibold text-accent-ink disabled:opacity-50"
           >
-            {status[t.address] === "pending" ? "Confirm…" : "Withdraw"}
+            {status[r.id] === "pending" ? "Confirm…" : "Withdraw"}
           </button>
         </li>
       ))}

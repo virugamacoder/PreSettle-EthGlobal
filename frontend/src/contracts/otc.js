@@ -1,18 +1,8 @@
-// OTCMarket interface the app expects (docs/CONTRACT_INTERFACE.md).
-// Replace with the real ABI from the contract developer when it's shared.
-import { parseAbi } from "viem";
+// OTCMarket ABI, generated from contracts/ on every `npx hardhat compile`
+// (hardhat-abi-exporter). Includes the custom errors, so reverts are readable.
+import OTC_MARKET_ABI from "./abi/OTCMarket.json";
 
-export const OTC_ABI = parseAbi([
-  "struct CreateParams { address offerToken; uint256 offerAmount; address wantToken; uint256 wantAmount; bool partialAllowed; uint64 deadline; address privateTaker; address broker; uint16 brokerFeeBps; }",
-  "struct Order { address maker; address offerToken; uint256 offerAmount; address wantToken; uint256 wantAmount; uint256 filledOffer; bool partialAllowed; uint64 deadline; address privateTaker; address broker; uint16 brokerFeeBps; bool cancelled; }",
-  "function createOrder(CreateParams p) returns (uint256 orderId)",
-  "function getOrder(uint256 orderId) view returns (Order)",
-  "function fill(uint256 orderId, uint256 offerAmount)",
-  "function cancel(uint256 orderId)",
-  "function withdraw(address token)",
-  "function balances(address account, address token) view returns (uint256)",
-  "event OrderCreated(uint256 indexed orderId, address indexed maker, address offerToken, address wantToken, uint256 offerAmount, uint256 wantAmount, uint64 deadline, address broker, address privateTaker)",
-]);
+export const OTC_ABI = OTC_MARKET_ABI;
 
 /**
  * Listing orientation used everywhere in the UI:

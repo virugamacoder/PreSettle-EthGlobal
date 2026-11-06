@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { erc20Abi } from "viem";
 import { useAccount, useConfig } from "wagmi";
-import { readContract, switchChain, waitForTransactionReceipt, writeContract } from "wagmi/actions";
+import { readContract, readContracts, switchChain, waitForTransactionReceipt, writeContract } from "wagmi/actions";
+import { Link } from "react-router";
 import { OFFER_STATUS, PREMARKET_ABI, PRE_TOKEN_DECIMALS } from "../contracts/premarket.js";
 import { getArkivWallet } from "../arkiv/wallet.js";
 import { arcTestnet } from "../config/wagmi.js";
@@ -66,15 +67,29 @@ export function PremarketActions({ listing, offer, market, phase, isSeller, purc
       },
     );
 
-  // Seller sends the real tokens for everything sold. The real token may not
-  // use 18 decimals, so the approval is scaled from the 18-dec sold amount.
+  // Seller sends the real tokens for everything sold. The contract converts
+  // each buyer's 18-dec purchase to the real token's decimals and rounds each
+  // one up, so the approval is the exact per-buyer sum (not one rounded total).
   const deliver = () =>
     run(
       [{ id: "approve", label: "Approve the real token", chain: "Arc" }, { id: "deliver", label: "Deliver to buyers", chain: "Arc" }],
       async (set) => {
         set("approve", { status: "active" });
+        const pm = { chainId: arcTestnet.id, address: settings.arc.premarket, abi: PREMARKET_ABI };
+        const id = BigInt(listing.offerId);
         const decimals = await readContract(config, { chainId: arcTestnet.id, address: market.realToken, abi: erc20Abi, functionName: "decimals" });
-        const needed = (offer.sold * 10n ** BigInt(decimals) + 10n ** BigInt(PRE_TOKEN_DECIMALS) - 1n) / 10n ** BigInt(PRE_TOKEN_DECIMALS);
+        const count = await readContract(config, { ...pm, functionName: "buyerCount", args: [id] });
+        const buyers = await readContracts(config, {
+          allowFailure: false,
+          contracts: Array.from({ length: Number(count) }, (_, i) => ({ ...pm, functionName: "buyerAt", args: [id, BigInt(i)] })),
+        });
+        const bought = await readContracts(config, {
+          allowFailure: false,
+          contracts: buyers.map((buyer) => ({ ...pm, functionName: "purchases", args: [id, buyer] })),
+        });
+        const scale = 10n ** BigInt(decimals);
+        const unit = 10n ** BigInt(PRE_TOKEN_DECIMALS);
+        const needed = bought.reduce((sum, n) => sum + (n * scale + unit - 1n) / unit, 0n);
         const hash = await writeContract(config, {
           chainId: arcTestnet.id, address: market.realToken, abi: erc20Abi, functionName: "approve", args: [settings.arc.premarket, needed],
         });
@@ -130,6 +145,12 @@ export function PremarketActions({ listing, offer, market, phase, isSeller, purc
   return (
     <div className="flex flex-col gap-4">
       {content}
+      {address && (!open || steps?.some((s) => s.status === "done")) && (
+        <p className="text-xs text-muted">
+          Tokens, refunds and proceeds from this offer are credited in the escrow. Withdraw them from{" "}
+          <Link to="/dashboard" className="text-accent hover:underline">Dashboard → Balances</Link>.
+        </p>
+      )}
       {!address && <p className="text-xs text-muted">Connect your wallet to see your actions.</p>}
       {steps && <TxSteps steps={steps} />}
     </div>

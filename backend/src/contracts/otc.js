@@ -1,17 +1,12 @@
-// Read-only view of the OTC market contract on Arc Testnet.
+// Read-only view of the OTC market contract on Arc Testnet (plus expire() for the keeper).
 //
-// The ABI below is the interface the app EXPECTS (docs/CONTRACT_INTERFACE.md).
-// When the contract developer shares the real ABI, replace OTC_ABI with it
-// and adjust readOrders() if the struct fields differ.
-import { parseAbi } from "viem";
+// The ABI is generated from contracts/ on every `npx hardhat compile`
+// (hardhat-abi-exporter), so it always matches the deployed contract.
+import { createRequire } from "node:module";
 import { arcPublic } from "../chains.js";
 import { config } from "../config.js";
 
-export const OTC_ABI = parseAbi([
-  "struct Order { address maker; address offerToken; uint256 offerAmount; address wantToken; uint256 wantAmount; uint256 filledOffer; bool partialAllowed; uint64 deadline; address privateTaker; address broker; uint16 brokerFeeBps; bool cancelled; }",
-  "function getOrder(uint256 orderId) view returns (Order)",
-  "function expire(uint256 orderId)",
-]);
+export const OTC_ABI = createRequire(import.meta.url)("./abi/OTCMarket.json");
 
 /** An order the keeper should expire: past deadline, still open, something left to refund. */
 export function needsExpiry(onchain, nowSec) {

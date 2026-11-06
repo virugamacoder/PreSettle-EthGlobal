@@ -12,7 +12,7 @@ import { PremarketActions } from "../components/PremarketActions.jsx";
 import { useMarket, useOnchainOffer, usePremarketListing, usePurchase } from "../hooks/usePremarket.js";
 import { useTokens, tokenLabel } from "../hooks/useTokens.js";
 import { useRecordView } from "../hooks/useViews.js";
-import { OFFER_STATUS, PREMARKET_ABI, PRE_TOKEN_DECIMALS, collateralFor, marketPhase } from "../contracts/premarket.js";
+import { OFFER_STATUS, PREMARKET_ABI, PRE_TOKEN_DECIMALS, collateralFor, marketPhase, minFirstPurchase } from "../contracts/premarket.js";
 import { Fill } from "../arkiv/schemas.js";
 import { getArkivWallet } from "../arkiv/wallet.js";
 import { arkivExplorer } from "../arkiv/client.js";
@@ -183,6 +183,14 @@ export default function PremarketDetails() {
               {isDecimal(amount) && Number(amount) > 0 && offer && (
                 <p className="num text-sm text-muted">
                   You pay {collText(collateralFor(parseUnits(amount, PRE_TOKEN_DECIMALS), offer.pricePerToken))} {coll}
+                </p>
+              )}
+              {offer && !(purchase.data > 0n) && (
+                // The contract requires a new buyer's first purchase to be at least
+                // 1/50 of the offer, or everything that's left (MAX_BUYERS = 50).
+                <p className="text-xs text-muted">
+                  Minimum first purchase:{" "}
+                  <span className="num">{pre(minFirstPurchase(offer.tokenAmount, available))} {o.symbol}</span>
                 </p>
               )}
               <button type="submit" disabled={!address || busy} className="rounded-full bg-brand-gradient px-4 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50">

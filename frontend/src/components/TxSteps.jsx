@@ -1,3 +1,4 @@
+import { BaseError, ContractFunctionRevertedError } from "viem";
 /**
  * Progress list for multi-transaction flows.
  * steps: [{ id, label, chain, status: "idle"|"active"|"done"|"error"|"skipped", link?, error? }]
@@ -44,8 +45,46 @@ export function updateStep(steps, id, patch) {
 }
 
 /** Shortest useful message from wallet / viem errors. */
+// Plain-language text for the escrow contracts' custom errors. Anything not
+// listed falls back to the error name split into words.
+const CONTRACT_ERRORS = {
+  BelowMinimumPurchase: "A first purchase must be at least 1/50 of the offer (or everything that's left).",
+  BuyerLimitReached: "This offer already has the maximum of 50 buyers.",
+  Oversold: "That's more than is left in this offer.",
+  SellerCannotBuy: "You can't buy your own offer.",
+  MakerCannotFill: "You can't fill your own order.",
+  UnauthorizedTaker: "This order is reserved for a specific taker.",
+  PartialFillNotAllowed: "This order must be filled in full.",
+  InvalidFillAmount: "That amount is more than what's left in the order.",
+  OrderDeadlineReached: "This order has passed its deadline.",
+  OrderNotExpired: "This order hasn't reached its deadline yet.",
+  OrderClosed: "This order is already filled, cancelled or expired.",
+  NotMaker: "Only the order's maker can do this.",
+  NotSeller: "Only the offer's seller can do this.",
+  OfferNotOpen: "This offer is already settled or cancelled.",
+  OfferHasSales: "Offers with sales can't be cancelled.",
+  TgeReached: "TGE has passed for this market.",
+  TgeNotReached: "TGE hasn't happened yet.",
+  DeliveryWindowClosed: "The delivery window has closed.",
+  DeliveryWindowNotClosed: "The delivery window is still open.",
+  RealTokenNotSet: "The admin hasn't set the real token yet.",
+  MarketInactive: "This market is paused.",
+  InvalidDeadline: "The deadline must be in the future.",
+  InvalidCollateralToken: "Collateral must be USDC or EURC.",
+  NothingToWithdraw: "Nothing to withdraw for this token.",
+  UnsoldAlreadyReclaimed: "Unsold collateral was already reclaimed.",
+  NoUnsoldCollateral: "Everything was sold: no unsold collateral to reclaim.",
+  UnexpectedTokenBalanceDelta: "This token takes a fee on transfer, so it can't be used.",
+  OwnableUnauthorizedAccount: "Only the contract owner can do this.",
+};
+
 export function errorMessage(err) {
   if (!err) return "";
   if (/user (rejected|denied)/i.test(err.message || "")) return "Rejected in wallet";
+  if (err instanceof BaseError) {
+    const reverted = err.walk((e) => e instanceof ContractFunctionRevertedError);
+    const name = reverted?.data?.errorName;
+    if (name) return CONTRACT_ERRORS[name] ?? name.replace(/([a-z])([A-Z])/g, "$1 $2");
+  }
   return err.shortMessage || err.details || err.message || String(err);
 }
