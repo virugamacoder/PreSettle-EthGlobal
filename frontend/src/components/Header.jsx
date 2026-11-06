@@ -6,7 +6,8 @@ import { useTheme } from "../hooks/useTheme.js";
 const NAV = [
   { to: "/", label: "Premarket", end: true },
   { to: "/otc", label: "OTC" },
-  { to: "/broker", label: "Broker" },
+  // Broker is paused for now: the /broker and /deal/:key pages still work, they're just not in the menu.
+  // { to: "/broker", label: "Broker" },
   { to: "/dashboard", label: "Dashboard" },
 ];
 
