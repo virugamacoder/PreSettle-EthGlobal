@@ -81,151 +81,21 @@ Secret values can't be copied from the old repo; enter them again.
 | `APP_DIR` | **same path as the old backend** (e.g. `/home/ubuntu/settlex`) so it replaces it in place |
 | `CERTBOT_EMAIL` | your email |
 
-**New app settings (from the build plan):**
+**The app's settings: one secret holding the whole `.env`:**
 
 | Secret | Value |
 |---|---|
-| `NODE_ENV` / `PORT` / `BASE_URL` | `production` / `3000` / `https://13.207.134.130.nip.io` |
-| `ARC_RPC_URL` | `https://rpc.testnet.arc.io` |
-| `SEPOLIA_RPC_URL` | Sepolia RPC (ENS) |
-| `ARKIV_ACCESS_KEY` | Arkiv Hub key (lock it to the server IP with the **IP allowlist**) |
-| `PLATFORM_PRIVATE_KEY` | **testnet-only** key for the keeper and ENS admin |
-| `OTC_CONTRACT`, `PREMARKET_CONTRACT`, `BROKER_REGISTRY` | Arc Testnet addresses |
-| `CIRCLE_API_KEY`, `CIRCLE_ENTITY_SECRET` | optional: Circle Dev-Controlled Wallet + Gas Station for the keeper |
+| `BACKEND_ENV_FILE` | Paste the full content of the backend `.env` (multi-line), following `backend/.env.example` |
 
-Add or remove rows to match what the backend actually reads.
+The workflow writes this secret to `<APP_DIR>/.env` on the server and appends `DOCKER_IMAGE=<user>/pre-settle-backend:latest`. To add or change a variable, edit this one secret; the workflow doesn't change. Remember to lock the Arkiv access key to the server IP (Arkiv Hub → **IP allowlist**) and use **testnet-only** private keys.
 
-### 3.3 Workflow file: `.github/workflows/deploy-backend.yml`
-Add this **once `backend/Dockerfile` exists**. It's the old SettleX workflow with four changes:
-1. It runs **only when `backend/**` changes**.
-2. The Docker build context is **`./backend`**.
-3. The image is named **`pre-settle-backend`**.
-4. It writes the **new `.env` keys**, and copies files from `backend/` with **`strip_components: 1`**.
+### 3.3 Workflow file
+The workflow is in the repo: [`.github/workflows/deploy-backend.yml`](../.github/workflows/deploy-backend.yml).
 
-```yaml
-name: Deploy Backend
-
-on:
-  push:
-    branches: [main]
-    paths:
-      - "backend/**"
-      - ".github/workflows/deploy-backend.yml"
-  workflow_dispatch:
-
-env:
-  DOCKER_IMAGE: ${{ secrets.DOCKER_HUB_USERNAME }}/pre-settle-backend
-
-jobs:
-  build:
-    name: Build & Push Docker Image
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
-      - id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.DOCKER_IMAGE }}
-          tags: |
-            type=raw,value=latest
-            type=sha,prefix=sha-
-      - uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          file: ./backend/Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  deploy:
-    name: Deploy to AWS EC2
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Write .env to server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          port: ${{ secrets.SERVER_PORT }}
-          script: |
-            set -e
-            APP_DIR="${{ secrets.APP_DIR }}"
-            mkdir -p "$APP_DIR"
-            ENV_FILE="$APP_DIR/.env"
-            printf 'NODE_ENV=%s\n'             '${{ secrets.NODE_ENV }}'             >  "$ENV_FILE"
-            printf 'PORT=%s\n'                 '${{ secrets.PORT }}'                 >> "$ENV_FILE"
-            printf 'BASE_URL=%s\n'             '${{ secrets.BASE_URL }}'             >> "$ENV_FILE"
-            printf 'ARC_RPC_URL=%s\n'          '${{ secrets.ARC_RPC_URL }}'          >> "$ENV_FILE"
-            printf 'SEPOLIA_RPC_URL=%s\n'      '${{ secrets.SEPOLIA_RPC_URL }}'      >> "$ENV_FILE"
-            printf 'ARKIV_ACCESS_KEY=%s\n'     '${{ secrets.ARKIV_ACCESS_KEY }}'     >> "$ENV_FILE"
-            printf 'PLATFORM_PRIVATE_KEY=%s\n' '${{ secrets.PLATFORM_PRIVATE_KEY }}' >> "$ENV_FILE"
-            printf 'OTC_CONTRACT=%s\n'         '${{ secrets.OTC_CONTRACT }}'         >> "$ENV_FILE"
-            printf 'PREMARKET_CONTRACT=%s\n'   '${{ secrets.PREMARKET_CONTRACT }}'   >> "$ENV_FILE"
-            printf 'BROKER_REGISTRY=%s\n'      '${{ secrets.BROKER_REGISTRY }}'      >> "$ENV_FILE"
-            printf 'DOCKER_IMAGE=%s\n'         '${{ secrets.DOCKER_HUB_USERNAME }}/pre-settle-backend:latest' >> "$ENV_FILE"
-            chmod 600 "$ENV_FILE"
-            echo "[✓] .env written (keys):"; cut -d= -f1 "$ENV_FILE"
-
-      # The Let's Encrypt certificate for <SERVER_HOST>.nip.io already exists on the
-      # server from the old backend. Copy the "Obtain Let's Encrypt Certificate" step
-      # from the old workflow here too if you ever move to a new server.
-
-      - name: Copy compose + nginx config
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          port: ${{ secrets.SERVER_PORT }}
-          source: "backend/docker-compose.yml,backend/nginx/nginx.conf"
-          target: ${{ secrets.APP_DIR }}
-          strip_components: 1   # backend/docker-compose.yml → APP_DIR/docker-compose.yml
-
-      - name: Deploy with Docker Compose
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          port: ${{ secrets.SERVER_PORT }}
-          script: |
-            set -e
-            cd "${{ secrets.APP_DIR }}"
-            echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
-            docker compose pull app
-            docker compose up -d --remove-orphans   # replaces the old SettleX container
-            docker compose restart nginx
-            docker image prune -f
-            docker compose ps
-
-      - name: Health check
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          port: ${{ secrets.SERVER_PORT }}
-          script: |
-            DOMAIN="${{ secrets.SERVER_HOST }}.nip.io"
-            for i in $(seq 1 12); do
-              if curl -s --max-time 5 "https://$DOMAIN/health" | grep -q '"status":"ok"'; then
-                echo "[✓] https://$DOMAIN is live"; exit 0
-              fi
-              sleep 5
-            done
-            echo "[!] health check failed"; cd "${{ secrets.APP_DIR }}" && docker compose logs --tail=50 app; exit 1
-```
+- Runs on push to `main` when `backend/**` changes, or manually (**Actions → Deploy Backend → Run workflow**).
+- **Build:** Docker image from `./backend`, pushed as `<DOCKER_HUB_USERNAME>/pre-settle-backend:latest` and `:sha-…`.
+- **Deploy:** writes `.env` from `BACKEND_ENV_FILE`, makes sure the Let's Encrypt certificate for `<SERVER_HOST>.nip.io` exists (skipped if still valid), copies `backend/docker-compose.yml` + `backend/nginx/nginx.conf` to `APP_DIR`, then `docker compose up -d`. This replaces the old SettleX container in place.
+- **Health check:** waits for `https://<SERVER_HOST>.nip.io/health` to return `{"status":"ok"}`.
 
 ### 3.4 Check it worked
 - `https://13.207.134.130.nip.io/health` returns `{"status":"ok"}`
