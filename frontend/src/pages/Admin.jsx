@@ -308,9 +308,13 @@ function Markets({ token: sessionToken }) {
   const tgeSec = tge ? Math.floor(new Date(tge).getTime() / 1000) : 0;
   // The contract accepts a delivery window of 1 minute to 365 days.
   const MAX_WINDOW_MIN = 365 * 24 * 60;
-  const windowOk = /^d+$/.test(windowMin) && Number(windowMin) >= 1 && Number(windowMin) <= MAX_WINDOW_MIN;
+  const windowOk = /^\d+$/.test(windowMin) && Number(windowMin) >= 1 && Number(windowMin) <= MAX_WINDOW_MIN;
   const tgeOk = tgeSec > Date.now() / 1000;
-  const fmtWindow = (min) => (min >= 1440 ? `${(min / 1440).toFixed(min % 1440 ? 1 : 0)} days` : min >= 60 ? `${(min / 60).toFixed(min % 60 ? 1 : 0)} hours` : `${min} minutes`);
+  const unit = (n, word) => `${n} ${word}${n === "1" ? "" : "s"}`;
+  const fmtWindow = (min) =>
+    min >= 1440 ? unit((min / 1440).toFixed(min % 1440 ? 1 : 0), "day")
+      : min >= 60 ? unit((min / 60).toFixed(min % 60 ? 1 : 0), "hour")
+        : unit(String(min), "minute");
   return (
     <Section
       title="Premarket markets"
