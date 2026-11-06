@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { PageHeader, EmptyState } from "../components/PageHeader.jsx";
+import { MarketStats } from "../components/MarketStats.jsx";
 import { OrderList } from "../components/OrderList.jsx";
 import { useOrders } from "../hooks/useOrders.js";
 import { useTokens } from "../hooks/useTokens.js";
@@ -49,6 +50,8 @@ export default function Otc() {
           </Link>
         }
       />
+
+      <MarketStats />
 
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <div className="flex rounded-lg border border-line bg-surface p-1" role="tablist" aria-label="Side">

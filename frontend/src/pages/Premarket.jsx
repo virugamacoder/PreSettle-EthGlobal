@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { PageHeader, EmptyState } from "../components/PageHeader.jsx";
+import { MarketStats } from "../components/MarketStats.jsx";
 import { ArkivBadge, Pill } from "../components/OrderList.jsx";
 import { usePremarketOffers } from "../hooks/usePremarket.js";
 import { useTokens, tokenLabel } from "../hooks/useTokens.js";
@@ -21,6 +22,8 @@ export default function Premarket() {
         description="Buy tokens before they launch. Sellers lock 100% of the deal value as collateral in escrow on Arc; if they don't deliver the real tokens after TGE, buyers receive that collateral."
         actions={<Link to="/create?tab=premarket" className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-accent-ink">Create offer</Link>}
       />
+
+      <MarketStats />
 
       {symbols.length > 1 && (
         <div className="mb-4 flex flex-wrap gap-2">

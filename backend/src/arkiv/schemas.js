@@ -56,6 +56,9 @@ export const Fill = defineSchema("presettle.fill.v1", {
   market: str().indexed(), // "otc" | "premarket"
   refId: u64().indexed(), // orderId / offerId
   orderKey: str().optional(), // Arkiv $key of the order entity
+  baseToken: addr().optional(), // traded token (OTC); premarket uses symbol
+  quoteToken: addr().optional(), // payment token (USDC/EURC)
+  symbol: str().optional(), // premarket token symbol
   taker: addr().indexed(),
   maker: addr().indexed(),
   amount: dec(),

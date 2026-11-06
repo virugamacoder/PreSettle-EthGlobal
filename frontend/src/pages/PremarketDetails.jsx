@@ -125,6 +125,8 @@ export default function PremarketDetails() {
           market: "premarket",
           refId: u64(BigInt(o.offerId)),
           orderKey: o.key,
+          symbol: o.symbol,
+          quoteToken: addr(o.collateralToken),
           taker: addr(address),
           maker: addr(o.seller),
           amount: dec(amount),

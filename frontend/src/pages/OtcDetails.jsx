@@ -142,6 +142,8 @@ export default function OtcDetails() {
           market: "otc",
           refId: u64(BigInt(order.orderId)),
           orderKey: order.key,
+          baseToken: addr(base),
+          quoteToken: addr(quote),
           taker: addr(address),
           maker: addr(order.maker),
           amount: dec(fillText),

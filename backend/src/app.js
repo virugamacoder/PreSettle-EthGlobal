@@ -5,6 +5,7 @@ import { config, features } from "./config.js";
 import { chainStatus, platformAccount } from "./chains.js";
 import { keeperStatus } from "./keeper.js";
 import { ordersRouter } from "./routes/orders.js";
+import { analyticsRouter } from "./routes/analytics.js";
 import { authRouter } from "./routes/auth.js";
 import { adminBrokersRouter, brokersRouter } from "./routes/brokers.js";
 
@@ -50,6 +51,7 @@ export function createApp() {
   });
 
   app.use("/v1/orders", ordersRouter);
+  app.use("/v1/analytics", analyticsRouter);
   app.use("/v1/auth", authRouter);
   app.use("/v1/brokers", brokersRouter);
   app.use("/v1/admin/brokers", adminBrokersRouter);
