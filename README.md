@@ -6,7 +6,7 @@
 - **Brokers** are verified with **ENSv2** names.
 - **The order book** is open, wallet-owned data on **Arkiv**.
 
-> Built at **ETHGlobal Mumbai 2026**. All application code in this repository was written during the hackathon; the only reused files are listed under [Pre-existing work](#pre-existing-work).
+> Built at **ETHGlobal Mumbai 2026**. All code in this repository was written during the hackathon (see [Pre-existing work](#pre-existing-work)).
 
 ## Status
 
@@ -44,18 +44,9 @@
 
 ## Pre-existing work
 
-The team built an earlier, separate product called SettleX before this event. Its application code is **not** included here; it was used only as a reference for the product idea and business rules.
+The team built an earlier, separate product called SettleX before this event. Its code is **not** included here; it was used only as a reference for the product idea and business rules. The new backend is deployed to the same AWS server the team already had.
 
-The only files reused from it are the **deployment configuration**, copied unchanged so the backend deploys to the same AWS server:
-
-| File | What it is |
-|---|---|
-| [backend/Dockerfile](backend/Dockerfile) | Node.js Docker image |
-| [backend/docker-compose.yml](backend/docker-compose.yml) | App + Nginx containers |
-| [backend/nginx/nginx.conf](backend/nginx/nginx.conf) | Nginx HTTPS reverse proxy |
-| [backend/.dockerignore](backend/.dockerignore) | Docker build ignore list |
-
-Any other pre-existing assets (logo, fonts) will be listed here if added.
+Early in the event, that product's deployment configuration (Dockerfile, docker-compose, nginx config) was copied in as a starting point (commit `93bb81e`). It has since been replaced by new files written here.
 
 ## AI usage
 

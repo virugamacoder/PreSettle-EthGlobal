@@ -62,12 +62,8 @@ The new workflow deploys into the **same EC2 server, same `APP_DIR`, same nginx 
 ### 3.1 Before the first deploy
 1. **Turn off the old repo's workflow** so it can't redeploy the old backend:
    GitHub → old `SettleX-backend` repo → **Settings → Actions → General → Disable actions**.
-2. The new backend must:
-   - listen on port **3000** (nginx proxies to `app:3000`)
-   - expose **`GET /health`** returning `{"status":"ok", …}` (the workflow's health check looks for it)
-   - have `backend/Dockerfile`, `backend/docker-compose.yml` and `backend/nginx/nginx.conf`
-
-   > These three infrastructure files can be adapted from the old SettleX backend. If you reuse them, list them under **Pre-existing work** in the README, because they existed before the hackathon.
+2. Already in this repo: the backend listens on port **3000** with **`GET /health`**; `backend/Dockerfile`, `backend/docker-compose.yml` (services `app` + `nginx`) and `backend/nginx/nginx.conf` (HTTPS with `nginx/certs/cert.pem` + `private.key`) are what the workflow deploys.
+3. Use the **same `APP_DIR`** as the old backend. Docker Compose names the project after that folder, so the new `app` and `nginx` containers replace the old ones on ports 80/443.
 
 ### 3.2 GitHub secrets (new repo → Settings → Secrets and variables → Actions)
 Secret values can't be copied from the old repo; enter them again.
