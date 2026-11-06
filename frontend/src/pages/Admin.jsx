@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { erc20Abi, isAddress, zeroAddress } from "viem";
 import { useAccount, useConfig, useReadContracts } from "wagmi";
-import { readContract, switchChain, waitForTransactionReceipt, writeContract } from "wagmi/actions";
+import { getAccount, readContract, simulateContract, switchChain, waitForTransactionReceipt, writeContract } from "wagmi/actions";
 import { ExpirationTime } from "@arkiv-network/sdk";
 import { addr, u64 } from "@arkiv-network/sdk/schema";
 import { PageHeader, EmptyState } from "../components/PageHeader.jsx";
@@ -114,7 +114,12 @@ function useArcSend(onDone) {
     setStatus(null);
     try {
       await switchAndWait(config, arcTestnet.id);
-      const hash = await writeContract(config, { chainId: arcTestnet.id, address, abi, functionName, args });
+      // Dry-run first: if the contract would revert, show why without sending a
+      // transaction (a mined revert still costs gas).
+      const { request } = await simulateContract(config, {
+        chainId: arcTestnet.id, address, abi, functionName, args, account: getAccount(config).address,
+      });
+      const hash = await writeContract(config, request);
       await waitForTransactionReceipt(config, { chainId: arcTestnet.id, hash });
       setStatus({ ok: true, text: `${doneText} (${arcExplorer.tx(hash)})` });
       onDone?.();
@@ -301,6 +306,11 @@ function Markets({ token: sessionToken }) {
   if (!settings.arc.premarket) return <Section title="Premarket markets"><EmptyState title="Premarket contract not configured" /></Section>;
 
   const tgeSec = tge ? Math.floor(new Date(tge).getTime() / 1000) : 0;
+  // The contract accepts a delivery window of 1 minute to 365 days.
+  const MAX_WINDOW_MIN = 365 * 24 * 60;
+  const windowOk = /^d+$/.test(windowMin) && Number(windowMin) >= 1 && Number(windowMin) <= MAX_WINDOW_MIN;
+  const tgeOk = tgeSec > Date.now() / 1000;
+  const fmtWindow = (min) => (min >= 1440 ? `${(min / 1440).toFixed(min % 1440 ? 1 : 0)} days` : min >= 60 ? `${(min / 60).toFixed(min % 60 ? 1 : 0)} hours` : `${min} minutes`);
   return (
     <Section
       title="Premarket markets"
@@ -309,15 +319,22 @@ function Markets({ token: sessionToken }) {
       <div className="grid gap-3 sm:grid-cols-4">
         <input value={symbol} onChange={(e) => setSymbol(e.target.value.trim().toUpperCase())} placeholder="Symbol (XYZ)" className={field} />
         <input type="datetime-local" value={tge} onChange={(e) => setTge(e.target.value)} className={field} aria-label="TGE time" />
-        <input value={windowMin} onChange={(e) => setWindowMin(e.target.value.trim())} placeholder="Delivery window (min)" className={`${field} num`} />
+        <input value={windowMin} onChange={(e) => setWindowMin(e.target.value.trim())} placeholder="Delivery window (min)" inputMode="numeric" aria-label="Delivery window in minutes" className={`${field} num ${windowMin && !windowOk ? "border-sell" : ""}`} />
         <button
           onClick={() => send(settings.arc.premarket, PREMARKET_ABI, "createMarket", [symbol, BigInt(tgeSec), BigInt(Number(windowMin) * 60)], `Market ${symbol} created`)}
-          disabled={busy || !symbol || tgeSec <= Date.now() / 1000 || !(Number(windowMin) > 0)}
+          disabled={busy || !symbol || !tgeOk || !windowOk}
           className={btn}
         >
           Create market
         </button>
       </div>
+      <p className={`mt-2 text-xs ${windowMin && !windowOk ? "text-sell" : "text-muted"}`}>
+        {windowMin && !windowOk
+          ? `Delivery window must be a whole number of minutes from 1 to ${MAX_WINDOW_MIN.toLocaleString()} (365 days).`
+          : windowOk && tgeOk
+            ? `Delivery window ${fmtWindow(Number(windowMin))}: sellers deliver between ${new Date(tgeSec * 1000).toLocaleString()} and ${new Date((tgeSec + Number(windowMin) * 60) * 1000).toLocaleString()}.`
+            : "TGE in your local time; delivery window in minutes (e.g. 10 for a demo, 1440 = 24 hours)."}
+      </p>
       {markets.length > 0 && (
         <ul className="mt-4 divide-y divide-line rounded-lg border border-line">
           {markets.map((m) => (
