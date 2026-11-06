@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router";
 import { erc20Abi, formatUnits, zeroAddress } from "viem";
 import { useAccount, useConfig, useReadContracts } from "wagmi";
 import { switchChain, waitForTransactionReceipt, writeContract } from "wagmi/actions";
@@ -12,7 +11,9 @@ import { useMyFills, useMyOrders } from "../hooks/useMyActivity.js";
 import { useTokens } from "../hooks/useTokens.js";
 import { OTC_ABI } from "../contracts/otc.js";
 import { PREMARKET_ABI } from "../contracts/premarket.js";
-import { useMarkets } from "../hooks/usePremarket.js";
+import { useMarkets, useMyPremarketOffers } from "../hooks/usePremarket.js";
+import { Link } from "react-router";
+import { formatAmount as fmt, timeLeft } from "../lib/format.js";
 import { arkivExplorer } from "../arkiv/client.js";
 import { arcTestnet } from "../config/wagmi.js";
 import { settings } from "../config/env.js";
@@ -23,6 +24,27 @@ const TABS = [
   { id: "fills", label: "My fills" },
   { id: "balances", label: "Balances" },
 ];
+
+// Premarket offers this wallet listed (the old dashboard's "My Created Deals").
+function MyPremarketOffers({ address, byAddress }) {
+  const { data, isLoading } = useMyPremarketOffers(address);
+  if (isLoading || !data?.length) return null;
+  return (
+    <div className="mt-6">
+      <h3 className="mb-2 text-sm font-semibold">My premarket offers</h3>
+      <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface">
+        {data.map((o) => (
+          <li key={o.key} className="flex flex-wrap items-center gap-x-6 gap-y-1 px-4 py-3 text-sm">
+            <span className="font-medium">{o.symbol}</span>
+            <span className="num">{fmt(o.tokenAmount)} @ {fmt(o.price)} {byAddress[o.collateralToken?.toLowerCase()]?.symbol ?? ""}</span>
+            <span className="text-muted">{o.tge > Date.now() / 1000 ? `TGE in ${timeLeft(o.tge)}` : "TGE passed"}</span>
+            <Link to={`/premarket/${o.key}`} className="ml-auto text-accent hover:underline">Open</Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 function Fills({ address }) {
   const { data, isLoading, error } = useMyFills(address);
@@ -170,6 +192,7 @@ export default function Dashboard() {
                 Listings disappear from Arkiv at their deadline; refunds show under Balances.
               </EmptyState>
             ))}
+          {tab === "orders" && <MyPremarketOffers address={address} byAddress={byAddress} />}
           {tab === "fills" && <Fills address={address} />}
           {tab === "balances" && <Balances address={address} />}
         </div>

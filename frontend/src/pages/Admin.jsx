@@ -22,7 +22,7 @@ import { arkivExplorer } from "../arkiv/client.js";
 import { arcTestnet } from "../config/wagmi.js";
 import { settings } from "../config/env.js";
 import { api } from "../lib/api.js";
-import { arcExplorer, shortAddress, timeLeft } from "../lib/format.js";
+import { arcExplorer, shortAddress } from "../lib/format.js";
 
 const field = "rounded-md border border-line bg-page px-3 py-2 text-sm text-ink";
 const btn = "rounded-full bg-brand-gradient px-4 py-2 text-sm font-semibold text-accent-ink disabled:opacity-50";

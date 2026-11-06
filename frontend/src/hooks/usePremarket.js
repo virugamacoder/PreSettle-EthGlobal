@@ -26,6 +26,19 @@ function toOffer(e, key = e.$key) {
   };
 }
 
+/** Live premarket offers this wallet created (Arkiv entities it owns). */
+export function useMyPremarketOffers(address) {
+  return useQuery({
+    queryKey: ["my-pm-offers", address],
+    enabled: Boolean(address),
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      const { entities } = await arkivPublic.select("*").from(PremarketOffer).ownedBy(address).orderBy(asc("$key")).limit(100).fetch();
+      return entities.map((e) => toOffer(e));
+    },
+  });
+}
+
 /** Live premarket offers from the Arkiv order book, optionally for one symbol. */
 export function usePremarketOffers(symbol) {
   return useQuery({

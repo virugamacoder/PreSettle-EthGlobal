@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, gte, lte } from "@arkiv-network/sdk/query";
+import { asc, eq, gt, gte, lte } from "@arkiv-network/sdk/query";
 import { addr, dec, key } from "@arkiv-network/sdk/schema";
 import { arkivPublic } from "../chains.js";
 import { OtcOrder } from "../arkiv/schemas.js";
