@@ -7,7 +7,7 @@ import { addr, u64 } from "@arkiv-network/sdk/schema";
 import { PageHeader, EmptyState } from "../components/PageHeader.jsx";
 import { WalletButton } from "../components/Header.jsx";
 import { BrokerBadge } from "../components/BrokerBadge.jsx";
-import { ConfigCheck } from "../components/ConfigCheck.jsx";
+// import { ConfigCheck } from "../components/ConfigCheck.jsx"; // section hidden for now
 import { TokenAvatar } from "../components/TokenBanners.jsx";
 import { useTokens } from "../hooks/useTokens.js";
 import { OTC_ABI } from "../contracts/otc.js";
@@ -153,7 +153,9 @@ function PlatformFees() {
   return (
     <Section
       title="Platform fees"
-      description="Fee in basis points (100 bps = 1%, the maximum). It applies to orders and offers created after the change; existing ones keep the fee they started with. Fees are credited to the owner's Balances."
+      description="Fee in basis points (100 bps = 1%, the maximum)."
+      // Hidden for now:
+      // It applies to orders and offers created after the change; existing ones keep the fee they started with. Fees are credited to the owner's Balances.
     >
       <ul className="flex flex-col gap-3">
         {FEE_CONTRACTS.map((c, i) => {
@@ -165,7 +167,7 @@ function PlatformFees() {
             <li key={c.name} className="flex flex-wrap items-center gap-3 text-sm">
               <span className="w-40 font-medium">{c.name}</span>
               <span className="num w-32">{bps === undefined ? "…" : `${bps} bps (${Number(bps) / 100}%)`}</span>
-              <span className="text-xs text-muted">{c.note}</span>
+              {/* <span className="text-xs text-muted">{c.note}</span> */}
               <span className="ml-auto flex items-center gap-2">
                 <input
                   value={value}
@@ -182,7 +184,7 @@ function PlatformFees() {
                   Save
                 </button>
               </span>
-              {owner && <span className="w-full text-xs text-muted">Owner: {shortAddress(owner)} (only this wallet can change it)</span>}
+              {/* {owner && <span className="w-full text-xs text-muted">Owner: {shortAddress(owner)} (only this wallet can change it)</span>} */}
             </li>
           );
         })}
@@ -416,7 +418,8 @@ function TokenList({ token: sessionToken }) {
   return (
     <Section
       title="Token list (Arkiv)"
-      description="Tokens users can pick. OTC token = what is traded (e.g. XYZ); Collateral = what it is priced and paid in (USDC and EURC are built in). Entries are Arkiv entities written by the list admin wallet; the app reads them with createdBy(admin)."
+      // Description hidden for now:
+      // description="Tokens users can pick. OTC token = what is traded (e.g. XYZ); Collateral = what it is priced and paid in (USDC and EURC are built in). Entries are Arkiv entities written by the list admin wallet; the app reads them with createdBy(admin)."
     >
       {!isListAdmin && <p className="mb-3 text-sm text-warn">Connect the list admin wallet ({settings.arkiv.adminAddress ? shortAddress(settings.arkiv.adminAddress) : "VITE_ARKIV_ADMIN_ADDRESS not set"}) to publish.</p>}
       <div className="grid gap-3 sm:grid-cols-[1fr_160px_auto]">
@@ -427,10 +430,12 @@ function TokenList({ token: sessionToken }) {
         </select>
         <button onClick={publish} disabled={busy || !isListAdmin || !isAddress(token)} className={btn}>Publish</button>
       </div>
+      {/* CoinMarketCap ID input hidden for now:
       <label className="mt-3 flex flex-wrap items-center gap-3 text-sm text-muted">
         CoinMarketCap ID (optional, for the reference price)
         <input value={cmcId} onChange={(e) => setCmcId(e.target.value.trim())} placeholder="e.g. 1027" inputMode="numeric" className={`${field} num w-32 py-1`} />
       </label>
+      */}
       <label className="mt-3 flex flex-wrap items-center gap-3 text-sm text-muted">
         Logo (optional, PNG/JPEG/WebP/GIF, max 512 KB)
         <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => setLogo(e.target.files?.[0] ?? null)} className="text-xs" />
@@ -469,7 +474,8 @@ export default function Admin() {
   return (
     <>
       <PageHeader title="Admin" description="Platform fees, premarket markets and the curated token list." />
-      <ConfigCheck />
+      {/* Configuration check hidden for now (frontend vs backend settings):
+      <ConfigCheck /> */}
       {!isConnected ? (
         <EmptyState title="Connect an admin wallet"><div className="mt-4 flex justify-center"><WalletButton /></div></EmptyState>
       ) : !session ? (
