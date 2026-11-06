@@ -89,6 +89,10 @@ const CONTRACT_ERRORS = {
 export function errorMessage(err) {
   if (!err) return "";
   if (/user (rejected|denied)/i.test(err.message || "")) return "Rejected in wallet";
+  // JSON-RPC -32005: the RPC node is rate-limiting (often the public Arc RPC MetaMask uses).
+  if (err.code === -32005 || err.cause?.code === -32005 || /exceeds defined limit|rate limit/i.test(err.message || "")) {
+    return "The network is busy (RPC rate limit). Wait a few seconds and try again. If it keeps happening, set a different Arc RPC in MetaMask (e.g. https://rpc.drpc.testnet.arc.io).";
+  }
   if (err instanceof BaseError) {
     const reverted = err.walk((e) => e instanceof ContractFunctionRevertedError);
     const name = reverted?.data?.errorName;
