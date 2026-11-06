@@ -1,1 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#0b1220"/><path d="M9 11h9a4 4 0 0 1 0 8h-4a4 4 0 0 0 0 8h9M23 5v4M9 23v4" stroke="#3ee0a1" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <defs>
+    <linearGradient id="ps" x1="4" y1="44" x2="44" y2="4" gradientUnits="userSpaceOnUse">
+      <stop offset="0.13" stop-color="#3EDD59"/>
+      <stop offset="0.87" stop-color="#CCF566"/>
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="14" fill="url(#ps)"/>
+  <!-- "P" whose bowl is a sealed deal (check mark) -->
+  <path d="M16 37V12h10a8 8 0 0 1 0 16H16" fill="none" stroke="#000009" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M21.6 20.4l2.6 2.6 4.6-5" fill="none" stroke="#000009" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

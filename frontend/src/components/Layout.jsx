@@ -7,11 +7,11 @@ export function Layout() {
     <div className="flex min-h-screen flex-col">
       <Header />
       <NetworkBanner />
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-8">
         <Outlet />
       </main>
-      <footer className="border-t border-line">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-6 text-xs text-muted">
+      <footer className="border-t border-line bg-surface">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-6 text-xs text-muted sm:px-8">
           <span>Escrow on Arc</span>
           <span>Order book on Arkiv</span>
           <span>Identity on ENS</span>

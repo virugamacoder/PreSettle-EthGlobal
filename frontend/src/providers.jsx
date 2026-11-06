@@ -14,8 +14,8 @@ export function Providers({ children }) {
   const { theme } = useTheme();
   const rkTheme =
     theme === "light"
-      ? lightTheme({ accentColor: "#0fa86f", borderRadius: "medium" })
-      : darkTheme({ accentColor: "#3ee0a1", accentColorForeground: "#04120c", borderRadius: "medium" });
+      ? lightTheme({ accentColor: "#29bd35", accentColorForeground: "#000009", borderRadius: "large", fontStack: "system" })
+      : darkTheme({ accentColor: "#57db63", accentColorForeground: "#000009", borderRadius: "large", fontStack: "system" });
 
   return (
     <WagmiProvider config={wagmiConfig}>

@@ -3,12 +3,15 @@ import { useCallback, useEffect, useSyncExternalStore } from "react";
 const KEY = "presettle-theme";
 const listeners = new Set();
 
+// Saved choice first; otherwise follow the system setting (light by default).
 function read() {
   try {
-    return localStorage.getItem(KEY) === "light" ? "light" : "dark";
+    const saved = localStorage.getItem(KEY);
+    if (saved === "light" || saved === "dark") return saved;
   } catch {
-    return "dark";
+    /* storage unavailable */
   }
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 function apply(theme) {
@@ -19,7 +22,7 @@ export function useTheme() {
   const theme = useSyncExternalStore(
     (cb) => (listeners.add(cb), () => listeners.delete(cb)),
     read,
-    () => "dark",
+    () => "light",
   );
 
   useEffect(() => apply(theme), [theme]);

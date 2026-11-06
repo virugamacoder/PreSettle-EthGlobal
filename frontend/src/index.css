@@ -1,8 +1,36 @@
 @import "tailwindcss";
 
-/* Design tokens: dark trading UI (default) with a light theme. */
+/* dark: utilities follow the app theme switch (data-theme), not only the OS setting */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@font-face {
+  font-family: "General Sans";
+  src: url("./assets/fonts/GeneralSans-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "General Sans";
+  src: url("./assets/fonts/GeneralSans-Medium.otf") format("opentype");
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: "General Sans";
+  src: url("./assets/fonts/GeneralSans-Semibold.otf") format("opentype");
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: "General Sans";
+  src: url("./assets/fonts/GeneralSans-Bold.otf") format("opentype");
+  font-weight: 700;
+  font-display: swap;
+}
+
+/* Design tokens: light by default (like the original SettleX look), dark variant below. */
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "General Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
   --color-page: var(--page);
@@ -13,50 +41,71 @@
   --color-muted: var(--muted);
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
   --color-buy: var(--buy);
   --color-sell: var(--sell);
   --color-warn: var(--warn);
 }
 
 :root {
-  --page: #070b14;
-  --surface: #0d1422;
-  --surface-2: #131c2e;
-  --line: #1f2a40;
-  --ink: #e6ebf5;
-  --muted: #8a96ad;
-  --accent: #3ee0a1;
-  --accent-ink: #04120c;
-  --buy: #3ee0a1;
-  --sell: #ff6b7a;
-  --warn: #f5b84a;
-  color-scheme: dark;
+  --page: #fafafb;
+  --surface: #ffffff;
+  --surface-2: #f9f9f9;
+  --line: #e8e8e8;
+  --ink: #000009;
+  --muted: #828282;
+  --accent: #29bd35;
+  --accent-ink: #000009;
+  --accent-soft: #d9f8de;
+  --buy: #29bd35;
+  --sell: #e5322b;
+  --warn: #ff9900;
+  --dot: rgba(0, 0, 9, 0.07);
+  --brand-gradient: linear-gradient(70.86deg, #3edd59 12.88%, #ccf566 87.12%);
+  color-scheme: light;
 }
 
-:root[data-theme="light"] {
-  --page: #f5f7fb;
-  --surface: #ffffff;
-  --surface-2: #eef2f8;
-  --line: #dde3ee;
-  --ink: #0d1422;
-  --muted: #5b6780;
-  --accent: #0fa86f;
-  --accent-ink: #ffffff;
-  --buy: #0fa86f;
-  --sell: #d93a4c;
-  --warn: #b7791f;
-  color-scheme: light;
+:root[data-theme="dark"] {
+  --page: #000009;
+  --surface: #0b0b0e;
+  --surface-2: #1a1a1a;
+  --line: #333333;
+  --ink: #fefefe;
+  --muted: #808080;
+  --accent: #57db63;
+  --accent-ink: #000009;
+  --accent-soft: #092a0c;
+  --buy: #57db63;
+  --sell: #ff5a52;
+  --warn: #ffad33;
+  --dot: rgba(255, 255, 255, 0.06);
+  color-scheme: dark;
 }
 
 html,
 body {
-  background: var(--page);
+  background-color: var(--page);
+  /* Soft dotted backdrop (CSS instead of a large image) */
+  background-image: radial-gradient(var(--dot) 1px, transparent 1.2px);
+  background-size: 14px 14px;
   color: var(--ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  font-synthesis: none;
 }
 
 .num {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
+}
+
+@utility bg-brand-gradient {
+  background-image: var(--brand-gradient);
+}
+
+@utility text-brand-gradient {
+  background-image: var(--brand-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
