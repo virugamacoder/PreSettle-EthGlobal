@@ -1,0 +1,186 @@
+<!doctype html>
+<!--
+  Source of docs/architecture.png (1600x1000).
+  Re-render after editing: open this file in a browser at 1600x1000 and take a screenshot,
+  or run the headless render used to create it.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<title>Pre Settle architecture</title>
+<style>
+  @font-face { font-family: "General Sans"; src: url("../../frontend/src/assets/fonts/GeneralSans-Regular.otf"); font-weight: 400; }
+  @font-face { font-family: "General Sans"; src: url("../../frontend/src/assets/fonts/GeneralSans-Medium.otf"); font-weight: 500; }
+  @font-face { font-family: "General Sans"; src: url("../../frontend/src/assets/fonts/GeneralSans-Semibold.otf"); font-weight: 600; }
+  :root {
+    --ink: #0b0d12; --muted: #5f6672; --line: #e3e5e8; --page: #fafafb;
+    --fe: #6d5cff; --arc: #2775ca; --arkiv: #22a92e; --be: #1f2430; --ext: #8a9099;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1600px; height: 1000px; }
+  body { font-family: "General Sans", system-ui, sans-serif; color: var(--ink); background: var(--page); position: relative; overflow: hidden; }
+  body::before { content: ""; position: absolute; inset: 0; background-image: radial-gradient(#d9dce1 1px, transparent 1px); background-size: 26px 26px; opacity: 0.6; }
+
+  .title { position: absolute; left: 40px; top: 36px; display: flex; align-items: center; gap: 14px; }
+  .title svg { width: 40px; height: 40px; }
+  .title h1 { font-size: 26px; font-weight: 600; letter-spacing: -0.01em; }
+  .title span { font-size: 18px; color: var(--muted); font-weight: 400; margin-left: 6px; }
+
+  .box { position: absolute; background: #fff; border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 10px 30px rgba(15, 20, 30, 0.07); overflow: hidden; }
+  .box .hd { padding: 14px 18px 12px; color: #fff; font-weight: 600; font-size: 19px; display: flex; justify-content: space-between; align-items: baseline; }
+  .box .hd small { font-weight: 400; font-size: 13px; opacity: 0.9; }
+  .box .bd { padding: 14px 18px; font-size: 15px; line-height: 1.5; color: #2b3039; }
+  .box .bd b { font-weight: 600; color: var(--ink); }
+  .box .bd .k { color: var(--muted); font-size: 13.5px; }
+  .item { display: flex; gap: 8px; align-items: baseline; margin-bottom: 6px; }
+  .item i { width: 7px; height: 7px; border-radius: 50%; flex: none; transform: translateY(-2px); }
+  .tag { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; margin-left: 4px; vertical-align: 1px; }
+
+  .fe .hd { background: var(--fe); } .fe .item i { background: var(--fe); }
+  .arc .hd { background: var(--arc); } .arc .item i { background: var(--arc); }
+  .arkiv .hd { background: var(--arkiv); } .arkiv .item i { background: var(--arkiv); }
+  .be .hd { background: var(--be); } .be .item i { background: var(--be); }
+  .ext .hd { background: #fff; color: var(--ink); border-bottom: 1px solid var(--line); font-size: 16px; }
+  .users .hd { background: #fff; color: var(--ink); border-bottom: 1px solid var(--line); }
+
+  .t-arc { background: #e6f0fb; color: var(--arc); }
+  .t-arkiv { background: #e6f7e8; color: var(--arkiv); }
+  .t-lock { background: #fff4e0; color: #b26b00; }
+
+  svg.wires { position: absolute; inset: 0; width: 1600px; height: 1000px; overflow: visible; }
+  .lbl { font-family: "General Sans", system-ui, sans-serif; font-size: 13.5px; font-weight: 500; fill: #2b3039; paint-order: stroke; stroke: var(--page); stroke-width: 6px; stroke-linejoin: round; }
+  .num { font-weight: 600; }
+
+  .foot { position: absolute; left: 40px; right: 40px; bottom: 30px; display: flex; justify-content: space-between; font-size: 14px; color: var(--muted); }
+  .foot b { color: var(--ink); font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="title">
+    <svg viewBox="0 0 48 48" aria-hidden="true">
+      <defs><linearGradient id="lg" x1="4" y1="44" x2="44" y2="4" gradientUnits="userSpaceOnUse"><stop offset="0.13" stop-color="#3EDD59"/><stop offset="0.87" stop-color="#CCF566"/></linearGradient></defs>
+      <rect width="48" height="48" rx="14" fill="url(#lg)"/>
+      <path d="M16 37V12h10a8 8 0 0 1 0 16H16" fill="none" stroke="#000009" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M21.6 20.4l2.6 2.6 4.6-5" fill="none" stroke="#000009" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <h1>Pre Settle <span>architecture: money on Arc, order book on Arkiv</span></h1>
+  </div>
+
+  <!-- wires (drawn first, under the boxes); labels sit in the gaps between columns -->
+  <svg class="wires" viewBox="0 0 1600 1000">
+    <defs>
+      <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#3a404b"/></marker>
+      <marker id="aArc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#2775ca"/></marker>
+      <marker id="aArk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#22a92e"/></marker>
+    </defs>
+    <!-- users -> frontend -->
+    <path d="M220 282 V328" stroke="#3a404b" stroke-width="2" fill="none" marker-end="url(#a)"/>
+    <text class="lbl" x="232" y="312">signs in MetaMask</text>
+
+    <!-- 1 frontend -> Arc (money) -->
+    <path d="M400 420 C495 420 495 280 588 280" stroke="#2775ca" stroke-width="2.4" fill="none" marker-end="url(#aArc)"/>
+    <text class="lbl" x="414" y="232"><tspan class="num">①</tspan> approve · lock</text>
+    <text class="lbl" x="414" y="250">fill · buy · deliver</text>
+    <text class="lbl" x="414" y="268">claim · withdraw</text>
+
+    <!-- 2/3 frontend <-> Arkiv (writes + reads) -->
+    <path d="M400 580 C495 580 495 690 588 690" stroke="#22a92e" stroke-width="2.4" fill="none" marker-start="url(#aArk)" marker-end="url(#aArk)"/>
+    <text class="lbl" x="414" y="742"><tspan class="num">②</tspan> write listings, fills</text>
+    <text class="lbl" x="414" y="760">(signed by the user)</text>
+    <text class="lbl" x="414" y="788"><tspan class="num">③</tspan> read offers, orders,</text>
+    <text class="lbl" x="414" y="806">fills, token list</text>
+
+    <!-- 4 frontend <-> backend (REST) -->
+    <path d="M400 470 H1198" stroke="#3a404b" stroke-width="2" fill="none" marker-start="url(#a)" marker-end="url(#a)"/>
+    <text class="lbl" x="800" y="460" text-anchor="middle"><tspan class="num">④</tspan> REST /v1: verified orders · analytics · prices · admin (SIWE)</text>
+
+    <!-- 5 backend -> Arc -->
+    <path d="M1200 390 C1105 390 1105 280 1012 280" stroke="#2775ca" stroke-width="2.2" fill="none" marker-end="url(#aArc)"/>
+    <text class="lbl" x="1186" y="232" text-anchor="end"><tspan class="num">⑤</tspan> verify getOrder</text>
+    <text class="lbl" x="1186" y="250" text-anchor="end">keeper: expire()</text>
+    <!-- 6 backend -> Arkiv -->
+    <path d="M1200 580 C1105 580 1105 690 1012 690" stroke="#22a92e" stroke-width="2.2" fill="none" marker-end="url(#aArk)"/>
+    <text class="lbl" x="1186" y="742" text-anchor="end"><tspan class="num">⑥</tspan> query the</text>
+    <text class="lbl" x="1186" y="760" text-anchor="end">order book</text>
+
+    <!-- backend -> CoinMarketCap -->
+    <path d="M1380 330 V256" stroke="#8a9099" stroke-width="1.8" fill="none" marker-end="url(#a)"/>
+    <text class="lbl" x="1392" y="298">token prices</text>
+    <!-- frontend -> ENS -->
+    <path d="M220 652 V756" stroke="#8a9099" stroke-width="1.8" stroke-dasharray="5 5" fill="none" marker-end="url(#a)"/>
+    <text class="lbl" x="232" y="708">maker names</text>
+  </svg>
+
+  <!-- Users -->
+  <div class="box users" style="left:40px; top:110px; width:360px; height:172px;">
+    <div class="hd">Users <small>one MetaMask wallet</small></div>
+    <div class="bd">
+      <div class="item"><i style="background:#3a404b"></i><span><b>Maker / Seller</b>: lists orders and offers</span></div>
+      <div class="item"><i style="background:#3a404b"></i><span><b>Taker / Buyer</b>: fills orders, buys tokens</span></div>
+      <div class="item"><i style="background:#3a404b"></i><span><b>Admin</b>: markets, fees, token list</span></div>
+    </div>
+  </div>
+
+  <!-- Frontend -->
+  <div class="box fe" style="left:40px; top:330px; width:360px; height:322px;">
+    <div class="hd">Frontend <small>React · Vite · wagmi · Vercel</small></div>
+    <div class="bd">
+      <div class="item"><i></i><span><b>Premarket</b> and <b>OTC</b> markets</span></div>
+      <div class="item"><i></i><span><b>Create / fill / buy</b> as one step list: Arc steps then the Arkiv step, network switched automatically</span></div>
+      <div class="item"><i></i><span><b>Dashboard</b>: my orders, my fills, <b>Balances</b> (withdraw)</span></div>
+      <div class="item"><i></i><span><b>Admin</b>: Sign-In with Ethereum, fees, markets, token list</span></div>
+      <div class="item"><i></i><span class="k">Every Arc transaction is signed in the user's wallet</span></div>
+    </div>
+  </div>
+
+  <!-- Arc -->
+  <div class="box arc" style="left:590px; top:110px; width:420px; height:300px;">
+    <div class="hd">Arc Testnet <small>money · chain 5042002 · gas in USDC</small></div>
+    <div class="bd">
+      <div class="item"><i></i><span><b>OTCMarket</b>: escrow the offer, fill at an on-chain price (mulDiv), cancel, permissionless <b>expire()</b>, fee split</span></div>
+      <div class="item"><i></i><span><b>PremarketMarket</b>: 100% seller collateral, buy before TGE, <b>deliver</b> in the window, <b>claimDefault</b> / void, reclaim unsold</span></div>
+      <div class="item"><i></i><span><b>Pull payments</b>: proceeds, refunds and fees credited, then withdrawn (USDC blocklist-safe)</span></div>
+      <div class="item"><i></i><span><b>USDC · EURC</b> <span class="k">(Circle)</span> as settlement and collateral</span></div>
+    </div>
+  </div>
+
+  <!-- Arkiv -->
+  <div class="box arkiv" style="left:590px; top:530px; width:420px; height:300px;">
+    <div class="hd">Arkiv Rabdi <small>open order book · no database</small></div>
+    <div class="bd">
+      <div class="item"><i></i><span><b>OTC orders</b><span class="tag t-arkiv">expire at deadline</span></span></div>
+      <div class="item"><i></i><span><b>Premarket offers</b><span class="tag t-arkiv">expire after TGE + window</span></span></div>
+      <div class="item"><i></i><span><b>Fills</b><span class="tag t-lock">read-only · 90 days</span></span></div>
+      <div class="item"><i></i><span><b>Trader profiles</b><span class="tag t-arkiv">extended on save</span></span></div>
+      <div class="item"><i></i><span><b>Token list</b>: trusted only via <b>createdBy(admin)</b></span></div>
+      <div class="item"><i></i><span class="k">Each entity is owned by the user's wallet: nobody else can edit it</span></div>
+    </div>
+  </div>
+
+  <!-- Backend -->
+  <div class="box be" style="left:1200px; top:330px; width:360px; height:300px;">
+    <div class="hd">Backend <small>Node · Express · AWS EC2</small></div>
+    <div class="bd">
+      <div class="item"><i></i><span><b>/v1/orders</b>: query Arkiv, then <b>verify each listing on Arc</b> (owner = on-chain maker, still open)</span></div>
+      <div class="item"><i></i><span><b>Analytics</b> computed from Arkiv entities</span></div>
+      <div class="item"><i></i><span><b>Keeper</b> (every 30 s): caches deadlines from Arkiv, calls <b>expire()</b> on Arc</span></div>
+      <div class="item"><i></i><span><b>SIWE admin</b> sessions · uploads · view counts</span></div>
+    </div>
+  </div>
+
+  <!-- External -->
+  <div class="box ext" style="left:1270px; top:146px; width:230px; height:110px;">
+    <div class="hd">CoinMarketCap</div>
+    <div class="bd"><span class="k">reference prices, 5-min cache</span></div>
+  </div>
+  <div class="box ext" style="left:40px; top:756px; width:300px; height:100px;">
+    <div class="hd">ENS <span style="font-weight:400;color:var(--muted);font-size:13px">&nbsp;Sepolia</span></div>
+    <div class="bd"><span class="k">shows a maker's name instead of 0x…</span></div>
+  </div>
+
+  <div class="foot">
+    <span><b>Flow:</b> money locks on Arc first ①, then the listing goes to Arkiv ②; the backend shows only listings that match the contract ④⑤⑥.</span>
+    <span>CI/CD: GitHub Actions → Docker Hub → EC2 · Vercel</span>
+  </div>
+</body>
+</html>

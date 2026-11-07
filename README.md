@@ -8,6 +8,17 @@
 
 > Built at **ETHGlobal Mumbai 2026**.
 
+## Architecture
+
+![Pre Settle architecture: money on Arc, order book on Arkiv](docs/architecture.png)
+
+1. Users lock, fill, buy, deliver, claim and withdraw on **Arc** (USDC/EURC escrow); every transaction is signed in their own wallet.
+2. The listing or fill record is then written to **Arkiv** by the same wallet, so the user owns it; it expires on its own at the deadline.
+3. The frontend reads offers, orders, fills and the token list straight from Arkiv.
+4. The **backend** serves verified orders, analytics, prices and admin sign-in: it queries Arkiv, checks every listing against the Arc contract, and runs the **keeper** that calls `expire()` after deadlines.
+
+Diagram source: [docs/diagram/architecture.html](docs/diagram/architecture.html).
+
 ## Status
 
 🚧 In progress. The frontend, backend and escrow contracts are live on testnet. See [docs/CONTRACT_INTERFACE.md](docs/CONTRACT_INTERFACE.md) for what the app expects from them, and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for how everything is deployed.
