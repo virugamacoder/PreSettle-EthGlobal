@@ -28,6 +28,26 @@ npx hardhat test        # OTCMarket + PremarketMarket test suites
 
 Commit the exported ABI files together with any contract change, so the app always matches the contracts.
 
+**What the 35 tests cover**
+
+| Suite | Covers |
+|---|---|
+| `test/openmarket.test.js` (OTCMarket, 19) | Create and validation; full and partial fills with the price rounded up; the taker can't underpay; deadline; private taker; maker can't fill own order; exact fee split; fee locked per order; cancel; `expire` by anyone after the deadline; withdraw; the contract holds nothing after everyone withdraws |
+| `test/premarket.test.js` (PremarketMarket, 16) | Markets and TGE rules; 100% collateral; buy rules (minimum first purchase, overselling, after TGE); deliver inside and outside the window; claim default payout maths; void when no real token is set; cancel; reclaim unsold; **solvency after every path** |
+
+## Folder layout
+
+| Path | What's inside |
+|---|---|
+| `contracts/OpenMarket.sol` | `OTCMarket` |
+| `contracts/PreMarket.sol` | `PremarketMarket` |
+| `contracts/Mock/TestToken.sol` | Mintable test / demo token |
+| `test/` | Hardhat test suites |
+| `ignition/modules/` | Deploy modules: `OTCMarket.js`, `PremarketMarket.js`, `DemoToken.js` |
+| `ignition/parameters/arc-testnet.json` | Constructor arguments for Arc Testnet |
+| `deployments/arc-testnet.json` | Deployed addresses, tx hashes, blocks |
+| `config/` | Network settings read from `.env` |
+
 ## Deploy to Arc Testnet
 
 Constructor arguments come from [ignition/parameters/arc-testnet.json](ignition/parameters/arc-testnet.json): owner (the Admin page's wallet: it receives platform fees and creates premarket markets), platform fee in bps (max 100), and the Arc USDC/EURC addresses.
