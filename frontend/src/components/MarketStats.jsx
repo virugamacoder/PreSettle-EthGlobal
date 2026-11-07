@@ -55,7 +55,7 @@ export function MarketStats() {
     id: v.key,
     label: `Order ${v.key.slice(0, 8)}…`,
     to: `/otc/${v.key}`,
-    value: `👁 ${v.views}`,
+    value: `${v.views} view${v.views === 1 ? "" : "s"}`,
   }));
   const trending = (data?.trending ?? []).slice(0, 3).map((t) => ({
     id: t.token ?? t.symbol,
