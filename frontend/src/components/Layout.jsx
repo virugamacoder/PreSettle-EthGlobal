@@ -15,8 +15,9 @@ export function Layout() {
           <span>Escrow on Arc</span>
           <span>Order book on Arkiv</span>
           <span>Identity on ENS</span>
-          <Link to="/settings" className="ml-auto hover:text-ink">Settings</Link>
-          <Link to="/admin" className="hover:text-ink">Admin</Link>
+          {/* Settings hidden for now (theme is in the header):
+          <Link to="/settings" className="ml-auto hover:text-ink">Settings</Link> */}
+          <Link to="/admin" className="ml-auto hover:text-ink">Admin</Link>
         </div>
       </footer>
     </div>

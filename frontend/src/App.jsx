@@ -9,7 +9,8 @@ import Deal from "./pages/Deal.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Create from "./pages/Create.jsx";
 import Admin from "./pages/Admin.jsx";
-import Settings from "./pages/Settings.jsx";
+// Settings page hidden for now (theme is in the header): re-enable the import and the route below.
+// import Settings from "./pages/Settings.jsx";
 import NotFound from "./pages/NotFound.jsx";
 
 const router = createBrowserRouter([
@@ -25,7 +26,7 @@ const router = createBrowserRouter([
       { path: "dashboard", element: <Dashboard /> },
       { path: "create", element: <Create /> },
       { path: "admin", element: <Admin /> },
-      { path: "settings", element: <Settings /> },
+      // { path: "settings", element: <Settings /> },
       { path: "*", element: <NotFound /> },
     ],
   },
