@@ -34,6 +34,13 @@ arkiv.schema = str('presettle.otc_order.v1') AND side = str('sell') AND price <=
 | Profile | 180 days, extended on each save (patch + extend in one `executeBatch`) | Active traders stay listed |
 | Token list entry | maximum lifetime | A curated list |
 
+## See it live
+
+- An OTC order that expires at its deadline: [`0x2e0f2e3f…`](https://rabdi.explorer.arkiv.network/entity/0x2e0f2e3f7c8b533f4c3045f595bc23a59adef8ad6fa4423c6af0ea174315bd2a)
+- A read-only fill record: [`0xe0e2e89d…`](https://rabdi.explorer.arkiv.network/entity/0xe0e2e89d9c78b4d09a27cd3fe75b354c33165d695d3746b735e53b2a9c465b06)
+- A token-list entry written by the admin wallet: [`0xdaf80fe3…`](https://rabdi.explorer.arkiv.network/entity/0xdaf80fe3364cc09a8eeb844f109aadcb1f9c247c2e79688c0077a6fe4968d43d)
+- Code: [schemas](../frontend/src/arkiv/schemas.js) · [order write with expiry](../frontend/src/lib/otcActions.js) · [read-only fill](../frontend/src/pages/OtcDetails.jsx) · [verification on Arc](../backend/src/services/orders.js) · [keeper](../backend/src/keeper.js)
+
 ## Anti-spoofing
 The schema name is not a security boundary: anyone can write an entity with our tag. So the backend checks **every** OTC listing against the Arc escrow before showing it: the Arkiv owner must be the on-chain maker, and the order must still be open. Anything else is dropped.
 
